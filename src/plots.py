@@ -15,55 +15,54 @@ def plot_gridworld(W, mat_q_stationary, mat_q, mat_tlr):
     mat_r[0, 0] = 0.5
     mat_r[-1, -1] = 1
 
-    with plt.style.context(["science"], ["ieee"]):
+    # Usar estilo
+    with plt.style.context(["science", "ieee"]):
         matplotlib.rcParams.update({"font.size": 14})
 
-        fig, axarr = plt.subplots(2, 2, figsize=(6, 6), constrained_layout=True)
+        # Crear una fila de subplots
+        fig, axarr = plt.subplots(1, 4, figsize=(16, 4), constrained_layout=True)
 
         vmin = 0.0
-        vmax = 100.0
+        vmax = 1.0
 
-        cax1 = axarr[0, 0].imshow(mat_r, vmin=vmin, vmax=vmax, cmap="Reds")
+        # Primer gráfico (mat_r)
+        cax1 = axarr[0].imshow(mat_r, vmin=vmin, vmax=vmax, cmap="Reds")
         for i in range(W):
             for j in range(W):
                 v = np.around(mat_r[i, j], 1)
-                axarr[0, 0].text(j, i, v, ha="center", va="bottom", color="silver")
-        axarr[0, 0].set_xlabel("(a)")
+                axarr[0].text(j, i, v, ha="center", va="bottom", color="silver")
+        axarr[0].set_title("(a)", fontsize=14)
 
-        axarr[0, 1].imshow(mat_q_stationary, vmin=vmin, vmax=vmax, cmap="Reds")
+        # Segundo gráfico (mat_q_stationary)
+        axarr[1].imshow(mat_q_stationary, vmin=vmin, vmax=vmax, cmap="Reds")
         for i in range(W):
             for j in range(W):
                 v = np.around(mat_q_stationary[i, j], 1)
-                axarr[0, 1].text(j, i, v, ha="center", va="bottom", color="silver")
-        axarr[0, 1].set_xlabel("(b)")
+                axarr[1].text(j, i, v, ha="center", va="bottom", color="silver")
+        axarr[1].set_title("(b)", fontsize=14)
 
-        axarr[1, 0].imshow(mat_q, vmin=vmin, vmax=vmax, cmap="Reds")
+        # Tercer gráfico (mat_q)
+        axarr[2].imshow(mat_q, vmin=vmin, vmax=vmax, cmap="Reds")
         for i in range(W):
             for j in range(W):
                 v = np.around(mat_q[i, j], 1)
-                axarr[1, 0].text(j, i, v, ha="center", va="bottom", color="silver")
-        axarr[1, 0].set_xlabel("(c)")
+                axarr[2].text(j, i, v, ha="center", va="bottom", color="silver")
+        axarr[2].set_title("(c)", fontsize=14)
 
-        axarr[1, 1].imshow(mat_tlr, vmin=vmin, vmax=vmax, cmap="Reds")
+        # Cuarto gráfico (mat_tlr)
+        axarr[3].imshow(mat_tlr, vmin=vmin, vmax=vmax, cmap="Reds")
         for i in range(W):
             for j in range(W):
                 v = np.around(mat_tlr[i, j], 1)
-                axarr[1, 1].text(j, i, v, ha="center", va="bottom", color="silver")
-        axarr[1, 1].set_xlabel("(d)")
+                axarr[3].text(j, i, v, ha="center", va="bottom", color="silver")
+        axarr[3].set_title("(d)", fontsize=14)
 
-        for ax in axarr.ravel():
+        # Ajustar los ejes
+        for ax in axarr:
             ax.set_xticks([])
             ax.set_yticks([])
 
-        gap = 0.0
-        width = 0.45
-        height = 0.45
-
-        axarr[0, 0].set_position([0, 0.5 + gap / 2, width, height])
-        axarr[0, 1].set_position([0.5 + gap, 0.5 + gap / 2, width, height])
-        axarr[1, 0].set_position([0, 0, width, height])
-        axarr[1, 1].set_position([0.5 + gap, 0, width, height])
-
+        # Guardar y mostrar la figura
         fig.savefig("figures/fig_1.jpg", dpi=300)
 
 
