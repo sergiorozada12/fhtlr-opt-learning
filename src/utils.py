@@ -3,6 +3,7 @@ import random
 from dataclasses import dataclass
 import numpy as np
 import torch
+import matplotlib.colors as mcolors
 
 
 class Discretizer:
@@ -92,3 +93,20 @@ class ReplayBuffer(object):
             sample.reward,
             sample.done,
         )
+
+def generate_random_colors(num_colors):
+    # Generar valores de matiz (H)
+    hue_values = np.linspace(0, 1, num_colors, endpoint=False)
+
+    # Fijar saturación (S) y valor (V) para obtener colores brillantes
+    saturation = 0.8
+    value = 0.8
+
+    # Convertir de HSV a RGB
+    hsv_colors = np.ones((num_colors, 3))
+    hsv_colors[:, 0] = hue_values
+    hsv_colors[:, 1] = saturation
+    hsv_colors[:, 2] = value
+    rgb_colors = mcolors.hsv_to_rgb(hsv_colors)
+
+    return rgb_colors

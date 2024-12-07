@@ -46,9 +46,9 @@ class GridWorldEnv:
 
                 # Reward
                 if sp == 0 and s != 0:
-                    R[sp, s, a] = 50
+                    R[sp, s, a] = 0.5
                 elif sp == nS - 1 and s != nS - 1:
-                    R[sp, s, a] = 100
+                    R[sp, s, a] = 1
                 elif s == 0 or s == nS - 1:
                     R[:, s, a] = 0
         

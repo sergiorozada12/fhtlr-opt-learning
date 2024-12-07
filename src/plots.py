@@ -2,6 +2,9 @@ import numpy as np
 
 import matplotlib
 import matplotlib.pyplot as plt
+import scienceplots
+from matplotlib.ticker import ScalarFormatter
+
 
 import tensorly as tl
 from tensorly.decomposition import parafac
@@ -9,8 +12,8 @@ from tensorly.decomposition import parafac
 
 def plot_gridworld(W, mat_q_stationary, mat_q, mat_tlr):
     mat_r = np.zeros((W, W))
-    mat_r[0, 0] = 50
-    mat_r[-1, -1] = 100
+    mat_r[0, 0] = 0.5
+    mat_r[-1, -1] = 1
 
     with plt.style.context(["science"], ["ieee"]):
         matplotlib.rcParams.update({"font.size": 14})
@@ -117,20 +120,43 @@ def plot_tensor_rank(Q_to_plot,name):
     norm_frobenius_original_tensor = np.linalg.norm(tensor)
     factors = []
     normlaized_errors = []
-    max_rank =  60
+    max_rank =  25
     for i in range(1,max_rank):
 
         factor =  parafac(tensor, rank=i)
         factors.append(factor)
         reconstructed_tensor = tl.cp_to_tensor(factor)
-        normlaized_errors.append(np.linalg.norm(tensor-reconstructed_tensor)/norm_frobenius_original_tensor)
+        normlaized_errors.append(np.linalg.norm(tensor-reconstructed_tensor)/(norm_frobenius_original_tensor/100))
+        if normlaized_errors[-1] < 10e-9:
+            break
 
-    rangos = np.arange(1, max_rank)  # Rango del 1 al 10
+    rangos = np.arange(1, len(normlaized_errors)+1)  # Rango del 1 al 10
     error = np.array(normlaized_errors)  # Errores aleatorios para cada rango
-    plt.stem(rangos, error, basefmt=" ")
-    plt.title("Error vs Rango")
-    plt.xlabel("Rango")
-    plt.ylabel("Error")
-    plt.grid(True)
-    plt.savefig("figures/"+name+"errors")
-    plt.clf()
+
+
+    with plt.style.context(["science"], ["ieee"]):
+        matplotlib.rcParams.update({"font.size": 16})
+
+        fig = plt.figure(figsize=[5, 4])
+        plt.plot(rangos, error, marker='o')
+
+        # Configurar notación científica en los ejes
+        ax = plt.gca()  # Obtener el objeto del eje actual
+        ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+        ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+
+        plt.locator_params(axis='y', nbins=5)  # 5 líneas en el eje Y
+
+        ax.ticklabel_format(style='scientific', axis='y', scilimits=(0, 0))  # Habilitar notación científica
+
+        plt.ylim(0, 100)
+        plt.xlim(0,len(error)+1)
+        plt.xlabel("Rank")
+        plt.ylabel("NFE(\%) - GridWord")
+        plt.grid(True,axis='y')
+        plt.tight_layout()
+        if name is None:
+            plt.show()
+        else:
+            plt.savefig("figures/"+name+"errors")
+        plt.clf()
