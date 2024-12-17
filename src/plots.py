@@ -2,6 +2,7 @@ import numpy as np
 
 import matplotlib
 import matplotlib.pyplot as plt
+import scienceplots
 
 import tensorly as tl
 from tensorly.decomposition import parafac
@@ -65,22 +66,22 @@ def plot_gridworld(W, mat_q_stationary, mat_q, mat_tlr):
 
 
 def plot_wireless():
-    dqn = np.load("results/dqn.npy")
-    dfhqn = np.load("results/dfhqn.npy")
-    fhtlr = np.load("results/fhtlr.npy")
-    ql = np.load("results/ql.npy")
+    dqn = np.load("results/dqn2.npy")
+    dfhqn = np.load("results/dfhqn2.npy")
+    fhtlr_max = np.load("results/fhtlr2_max.npy")
+    fhtlr_true = np.load("results/fhtlr2_true.npy")
 
     mu_dqn = np.mean(dqn, axis=0)
     mu_dfhqn = np.mean(dfhqn, axis=0)
-    mu_fhtlr = np.mean(fhtlr, axis=0)
-    mu_ql = np.mean(ql, axis=0)
+    mu_fhtlr_max = np.mean(fhtlr_max, axis=0)
+    mu_fhtlr_true = np.mean(fhtlr_true, axis=0)
 
     w = 100
 
     mu_dqn_smt = [np.mean(mu_dqn[i - w : i]) for i in range(w, len(mu_dqn))]
     mu_dfhqn_smt = [np.mean(mu_dfhqn[i - w : i]) for i in range(w, len(mu_dfhqn))]
-    mu_fhtlr_smt = [np.mean(mu_fhtlr[i - w : i]) for i in range(w, len(mu_fhtlr))]
-    mu_ql_smt = [np.mean(mu_ql[i - w : i]) for i in range(w, len(mu_ql))]
+    mu_fhtlr_max_smt = [np.mean(mu_fhtlr_max[i - w : i]) for i in range(w, len(mu_fhtlr_max))]
+    mu_fhtlr_true_smt = [np.mean(mu_fhtlr_true[i - w : i]) for i in range(w, len(mu_fhtlr_true))]
 
     with plt.style.context(["science"], ["ieee"]):
         matplotlib.rcParams.update({"font.size": 16})
@@ -90,12 +91,12 @@ def plot_wireless():
         plt.plot(mu_dqn, alpha=0.2, c="b")
         plt.plot(mu_dfhqn_smt, c="orange", label="DFHQN")
         plt.plot(mu_dfhqn, alpha=0.2, c="orange")
-        plt.plot(mu_fhtlr_smt, c="g", label="FHTLR")
-        plt.plot(mu_fhtlr, alpha=0.2, c="g")
-        plt.plot(mu_ql_smt, c="k", label="FHQ-learning")
-        plt.plot(mu_ql, alpha=0.2, c="k")
-        plt.xlim(0, 100_000)
-        plt.ylim(-3, 1.6)
+        plt.plot(mu_fhtlr_max_smt, c="g", label="FHTLR - MAX")
+        plt.plot(mu_fhtlr_max, alpha=0.2, c="g")
+        plt.plot(mu_fhtlr_true_smt, c="k", label="FHTLR - TRUE")
+        plt.plot(mu_fhtlr_true, alpha=0.2, c="k")
+        #plt.xlim(0, 100_000)
+        #plt.ylim(-3, 1.6)
         plt.grid()
         plt.legend()
         plt.xlabel("Episodes")

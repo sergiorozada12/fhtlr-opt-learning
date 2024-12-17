@@ -1,3 +1,9 @@
+*.pkl
+*.out
+exp.py
+exp1.py
+pid.txt
+explain.txt
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
