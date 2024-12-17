@@ -164,3 +164,59 @@ class BackPolicyImprovement:
             for nA, a in enumerate(product(*[ np.arange(0,da) for da in discretizer.bucket_actions])):
                 Q_reshape [h,...,a] = np.transpose(self.Q[h,:,nA].reshape(*discretizer.bucket_states))
         return Q_reshape
+
+
+class ClassicDP:
+    
+    def __init__(self,nS,nA,R,P,gamma = 0.9) -> None:
+
+        self.R_sa = np.sum(np.multiply(R, P),axis=0)
+        self.P_sa_s = np.transpose(P, (1, 2, 0))
+
+        self.nS = nS
+        self.nA = nA
+
+        self.Q = np.zeros(
+                    np.concatenate([[nS], [nA]])
+                )
+        self.gamma = gamma
+    
+    def policy_evaluation(self,Pi):
+        P_s_s = np.einsum('ijk, ij -> ik', self.P_sa_s, Pi)
+        R_s = np.einsum('ij, ij -> i', self.R_sa, Pi)
+        
+        V = np.zeros(self.nS)
+        for _ in range(100):
+            V = R_s + self.gamma * P_s_s @ V
+            
+        Q = self.R_sa + self.gamma * self.P_sa_s @ V
+        return V, Q
+
+    def policy_improvement(self,Q):
+        Pi = np.zeros((self.nS, self.nA))
+        for s in range(self.nS):
+            a = np.argmax(Q[s, :])
+            Pi[s, a] = 1
+        return Pi
+
+    def run(self):
+        V_old = np.zeros(self.nS)
+        Q_old = np.zeros((self.nS, self.nA))
+        Pi = np.random.rand(self.nS, self.nA)
+        Pi /= Pi.sum(axis=1, keepdims=True)
+        error_plicy = []
+        for _ in range(30):
+            V, Q = self.policy_evaluation(Pi)
+            Pi = self.policy_improvement(Q)
+
+            #print(V)
+            #assert np.all(V >= V_old)
+            #assert np.all(Q >= Q_old)
+            
+            error_plicy.append(np.linalg.norm(V - V_old))
+            V_old = V
+            Q_old = Q
+        self.Q = Q
+        return Q
+
+    

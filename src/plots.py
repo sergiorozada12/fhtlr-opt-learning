@@ -12,7 +12,9 @@ from tensorly.decomposition import parafac
 
 def plot_gridworld(W, mat_q_stationary, mat_q, mat_tlr):
     mat_r = np.zeros((W, W))
-    mat_r[0, 0] = 0.5
+    mat_r[0, 0] = 1
+    mat_r[0, -1] = 1
+    mat_r[-1, 0] = 1
     mat_r[-1, -1] = 1
 
     # Usar estilo
@@ -29,7 +31,7 @@ def plot_gridworld(W, mat_q_stationary, mat_q, mat_tlr):
         cax1 = axarr[0].imshow(mat_r, vmin=vmin, vmax=vmax, cmap="Reds")
         for i in range(W):
             for j in range(W):
-                v = np.around(mat_r[i, j], 1)
+                v = np.around(mat_r[i, j], 3)
                 axarr[0].text(j, i, v, ha="center", va="bottom", color="silver")
         axarr[0].set_title("(a)", fontsize=14)
 
@@ -37,7 +39,7 @@ def plot_gridworld(W, mat_q_stationary, mat_q, mat_tlr):
         axarr[1].imshow(mat_q_stationary, vmin=vmin, vmax=vmax, cmap="Reds")
         for i in range(W):
             for j in range(W):
-                v = np.around(mat_q_stationary[i, j], 1)
+                v = np.around(mat_q_stationary[i, j], 3)
                 axarr[1].text(j, i, v, ha="center", va="bottom", color="silver")
         axarr[1].set_title("(b)", fontsize=14)
 
@@ -45,7 +47,7 @@ def plot_gridworld(W, mat_q_stationary, mat_q, mat_tlr):
         axarr[2].imshow(mat_q, vmin=vmin, vmax=vmax, cmap="Reds")
         for i in range(W):
             for j in range(W):
-                v = np.around(mat_q[i, j], 1)
+                v = np.around(mat_q[i, j], 3)
                 axarr[2].text(j, i, v, ha="center", va="bottom", color="silver")
         axarr[2].set_title("(c)", fontsize=14)
 
@@ -53,7 +55,7 @@ def plot_gridworld(W, mat_q_stationary, mat_q, mat_tlr):
         axarr[3].imshow(mat_tlr, vmin=vmin, vmax=vmax, cmap="Reds")
         for i in range(W):
             for j in range(W):
-                v = np.around(mat_tlr[i, j], 1)
+                v = np.around(mat_tlr[i, j], 3)
                 axarr[3].text(j, i, v, ha="center", va="bottom", color="silver")
         axarr[3].set_title("(d)", fontsize=14)
 
@@ -64,6 +66,7 @@ def plot_gridworld(W, mat_q_stationary, mat_q, mat_tlr):
 
         # Guardar y mostrar la figura
         fig.savefig("figures/fig_1.jpg", dpi=300)
+        plt.clf()
 
 
 def plot_wireless():
@@ -113,13 +116,12 @@ def plot_errors(errors,name):
     plt.savefig("figures/"+name+"errors")
     plt.clf()
 
-def plot_tensor_rank(Q_to_plot,name):
+def plot_tensor_rank(Q_to_plot,name,max_rank =  25):
     
     tensor = Q_to_plot - np.mean(Q_to_plot)
     norm_frobenius_original_tensor = np.linalg.norm(tensor)
     factors = []
     normlaized_errors = []
-    max_rank =  25
     for i in range(1,max_rank):
 
         factor =  parafac(tensor, rank=i)

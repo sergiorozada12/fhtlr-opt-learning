@@ -97,7 +97,7 @@ def calculate_Dh(S1,S2, A, H, ENV, Pi,k):
     Dh = np.vstack(Dh_h)
     return Dh
 
-def normalize_cp_factors2(weights, factors):
+def normalize_cp_factors2(factors):
     """
     Normaliza los factores de una descomposición CP sin cambiar la norma total del tensor reconstruido.
     
@@ -113,8 +113,8 @@ def normalize_cp_factors2(weights, factors):
     factors_normalized = [np.copy(factor) for factor in factors]
 
    
-    norms = [np.linalg.norm(factor, ord = "fro") for factor in factors]  # Normas de A[:, r], B[:, r], C[:, r]
-    geometric_mean = np.cbrt(np.prod(norms))  # Media geométrica de las normas
+    norms = [np.linalg.norm(factor) for factor in factors]
+    geometric_mean = np.prod(norms)**(1/len(norms)) # Media geométrica de las normas
 
     # Ajustar los factores para que su norma sea la misma
     for i, factor in enumerate(factors_normalized):
@@ -122,7 +122,7 @@ def normalize_cp_factors2(weights, factors):
         factor *= geometric_mean  # Escalar por la media geométrica
 
     # Ajustar el peso asociado al componente
-    weights *= np.prod(norms) / geometric_mean**len(factors)
+    weights = np.prod(norms) / geometric_mean**len(factors)
 
     return weights, factors_normalized
 
@@ -176,6 +176,8 @@ class bcd:
             
             H_i = np.matmul(np.linalg.pinv(calculate_Dh(S1_i,S2, A_i, H, self.ENV, self.Pi, self.k)), -r_gorro).reshape(self.ENV.H,self.k)
 
+            _, [S1_i,S2_i,A_i,H_i] = normalize_cp_factors2([S1_i,S2_i,A_i,H_i])
+
             fo_values.append(np.linalg.norm(np.tile(r, (self.ENV.H, 1)).reshape(-1) + np.matmul(calculate_Da(S1,S2, A, H, self.ENV, self.Pi),(A.T).reshape(-1)),ord = 2)**2)
             convs.append(np.linalg.norm(S1-S1_i, ord = "fro")+np.linalg.norm(S2-S2, ord = "fro") + np.linalg.norm(A-A_i, ord = "fro") + np.linalg.norm(H-H_i, ord = "fro"))
             errors.append(np.linalg.norm( self.Q_opt - tl.cp_to_tensor(([1]*self.k,[factor.detach().numpy() for factor in self.Q.factors]))))
@@ -228,7 +230,7 @@ class bcd:
 
 class bcgd:
 
-    def __init__(self,Q,Pi,discretizer,env,k,Q_opt,alpha, normalize = 0) -> None:
+    def __init__(self,Q,Pi,discretizer,env,k,Q_opt,alpha, normalize = 0,decay =0.99999) -> None:
 
         self.Q = Q
         self.Pi = Pi
@@ -238,6 +240,7 @@ class bcgd:
         self.Q_opt = Q_opt
         self.alpha = alpha
         self.normalize = normalize
+        self.decay = decay
 
     def run(self,bcgd):
         r = np.sum(np.multiply(self.ENV.R, self.ENV.P),axis=0).reshape(-1)
@@ -273,10 +276,13 @@ class bcgd:
             Dh_n = calculate_Dh(S1_i,S2_i, A_i, H, self.ENV, self.Pi, self.k)
             H_grad = np.matmul(np.transpose(Dh_n),(np.matmul(Dh_n, H.reshape(-1)) + r_gorro)).reshape(self.ENV.H,self.k)
             H_i = (H - self.alpha *H_grad)
+            
+            _, [S1_i,S2_i,A_i,H_i] = normalize_cp_factors2([S1_i,S2_i,A_i,H_i])
 
             fo_values.append(np.linalg.norm(np.tile(r, (self.ENV.H, 1)).reshape(-1) + np.matmul(calculate_Da(S1,S2, A, H, self.ENV, self.Pi),(A.T).reshape(-1)),ord=2)**2)
             convs.append(np.linalg.norm(S1-S1_i) + np.linalg.norm(S2-S2_i) + np.linalg.norm(A-A_i) + np.linalg.norm(H-H_i))
             errors.append(np.linalg.norm( self.Q_opt - tl.cp_to_tensor(([1]*self.k,[factor.detach().numpy() for factor in self.Q.factors]))))
+            self.alpha = self.alpha*self.decay
 
             if errors[-1] < 10^-6:
                 break

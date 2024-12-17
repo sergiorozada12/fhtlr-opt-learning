@@ -23,13 +23,18 @@ class GridWorldEnv:
             1: (-1, 0),  # LEFT
             2: (0, +1),  # DOWN
             3: (+1, 0),  # RIGHT
+            #4: ( 0, 0),  # NOTHING
         }
 
         P = np.zeros((nS, nS, nA))
+        #R = -0.1*np.ones((nS, nS, nA))
         R = np.zeros((nS, nS, nA))
-        P_0 = np.ones(nS) / (nS - 2)
+        P_0 = np.ones(nS) / (nS - 4)
         P_0[0] = 0
         P_0[nS - 1] = 0
+        P_0[4 * W + 0] = 0
+        P_0[0 * W + 4] = 0
+        #P_0[4 * W + 2] = 0
 
         for s in range(nS):
             for a in range(nA):
@@ -41,16 +46,20 @@ class GridWorldEnv:
                 sp = y * W + x
 
                 # Transition
-                if s != 0 and s != nS - 1:
+                if s != 0 and s != nS - 1 and s != (4 * W + 0) and s != (0 * W + 4):
+                #if s != (4 * W + 2):
                     P[sp, s, a] = 1
-
+                if a == 4:
+                    R[sp, s, a] = 0
                 # Reward
                 if sp == 0 and s != 0:
-                    R[sp, s, a] = 0.5
+                    R[sp, s, a] = 1
                 elif sp == nS - 1 and s != nS - 1:
                     R[sp, s, a] = 1
-                elif s == 0 or s == nS - 1:
-                    R[:, s, a] = 0
+                elif sp == (4 * W + 0) and s != (4 * W + 0):
+                    R[:, s, a] = 1
+                elif sp == (0 * W + 4) and s != (0 * W + 4):
+                    R[:, s, a] = 1
         
         self.P = P
         self.R = R
