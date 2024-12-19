@@ -218,5 +218,18 @@ class ClassicDP:
             Q_old = Q
         self.Q = Q
         return Q
-
+    
+    def run_value_iter(self):
+        V_old = np.zeros(self.nS)
+        error_value = []
+        gamma = 1
+        for _ in range(60):
+            V = np.max(self.R_sa + gamma * self.P_sa_s @ V_old, axis=1)
+            assert np.all(V >= V_old)
+            error_value.append(np.linalg.norm(V - V_old))
+            V_old = V
+        V_value = V
+        self.Q = self.R_sa + gamma * self.P_sa_s @ V
+        self.V = V 
+        return self.Q
     

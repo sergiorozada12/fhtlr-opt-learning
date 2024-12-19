@@ -1,6 +1,6 @@
 from PIL import Image
 
-def crear_mosaico(fotos, output="figures/PI-PI-comp.png"):
+def crear_mosaico(fotos, output="figures/PI-PI-final.png"):
     # Cargar las imágenes
     imagenes = [Image.open(foto) for foto in fotos]
 
@@ -22,7 +22,7 @@ def crear_mosaico(fotos, output="figures/PI-PI-comp.png"):
     mosaic.show()
 
 # Lista de imágenes
-fotos = ["figures/BCGD_0.png", "figures/POLICY-BCGD_1.png", "figures/BCGD-PE_norm.png", "figures/BCGD-PI_norm.png"]
+fotos = ["figures/BCD-PE.png", "figures/BCD-PI.png", "figures/BCGD-PE.png", "figures/BCGD-PI.png"]
 
 # Crear mosaico
 crear_mosaico(fotos)

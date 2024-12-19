@@ -200,6 +200,10 @@ class bcd:
         return_mean = []
         return_std = []
 
+        list = [run_test_episode(self.ENV,self.Q,self.ENV.H) for i in range(1000)]
+        return_mean.append(np.mean(list))
+        return_std.append(np.std(list))
+
         for i in range(num_iter_policy):
             Q_tensor = tl.cp_to_tensor(([1]*self.k,[factor.detach().numpy() for factor in self.Q.factors]))
 
@@ -230,7 +234,7 @@ class bcd:
 
 class bcgd:
 
-    def __init__(self,Q,Pi,discretizer,env,k,Q_opt,alpha, normalize = 0,decay =0.99999) -> None:
+    def __init__(self,Q,Pi,discretizer,env,k,Q_opt,alpha, normalize = 0,decay =0.99996) -> None:
 
         self.Q = Q
         self.Pi = Pi
@@ -301,6 +305,10 @@ class bcgd:
         conv_list = []
         return_mean = []
         return_std = []
+
+        list = [run_test_episode(self.ENV,self.Q,self.ENV.H) for i in range(1000)]
+        return_mean.append(np.mean(list))
+        return_std.append(np.std(list))
 
         for i in range(num_iter_policy):
             Q_tensor = tl.cp_to_tensor(([1]*self.k,[factor.detach().numpy() for factor in self.Q.factors]))

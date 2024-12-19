@@ -23,7 +23,7 @@ class GridWorldEnv:
             1: (-1, 0),  # LEFT
             2: (0, +1),  # DOWN
             3: (+1, 0),  # RIGHT
-            #4: ( 0, 0),  # NOTHING
+            4: ( 0, 0),  # NOTHING
         }
 
         P = np.zeros((nS, nS, nA))
