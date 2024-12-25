@@ -8,10 +8,12 @@ from src.utils import Discretizer
 from src.agents.dqn import DFHqn, Dqn
 from src.agents.fhtlr import FHMaxTlr, FHTlr
 from src.agents.ql import QLearning, FHQLearning
+from src.agents.bf import FHLinear
+from src.agents.rbf import RBF, FHRBF
 from src.trainer import run_test_episode,run_train_episode,run_experiment
 from src.plots import plot_wireless
 import os
-
+import pickle
 #Enviroment
 GAMMA = 0.9
 H = 5
@@ -50,16 +52,18 @@ DISCRETIZER = Discretizer(
 )
 
 #Experiments
-EPISODES = 20_000
+EPISODES = 40_000
 BUFFER_SIZE = 1_000
 ALPHA_DQN = 0.01
+ALPHA_FHRBF = 0.1
+ALPHA_LINEAR = 0.1
 ALPHA_FHTLR = 0.1
 ALPHA_QL = 10
 K = 20
 SCALE = 0.5
 W_DECAY = 0.0
 EPS_DECAY = 0.9999
-N_EXPS = 7
+N_EXPS = 100
 
 def generate_env():
     env = WirelessCommunicationsEnv(
@@ -97,8 +101,16 @@ def run_experiment_with_agent(agent_name, n_exp):
         agent = FHTlr(DISCRETIZER, ALPHA_FHTLR, H, K, SCALE, w_decay=W_DECAY)
     if agent_name == "fhql":
         agent = FHQLearning(DISCRETIZER, ALPHA_QL, H, SCALE, 1)
-                                   
-    return run_experiment( n=n_exp,E=EPISODES, H=H, eps=1.0, eps_decay=EPS_DECAY, env=generate_env(), agent=agent)
+    if agent_name == "fhbf":
+        agent = FHLinear(DISCRETIZER, ALPHA_LINEAR, H, BUFFER_SIZE)
+    if agent_name == "fhrbf":
+        agent = FHRBF(DISCRETIZER, ALPHA_FHRBF, H, BUFFER_SIZE)
+    
+    Gs  = run_experiment( n=n_exp,E=EPISODES, H=H, eps=1.0, eps_decay=EPS_DECAY, env=generate_env(), agent=agent)
+    agent_file_path = f'results/agents/wireles_{agent_name}_{n_exp}.pkl'
+    with open(agent_file_path, 'wb') as f:
+        pickle.dump(agent, f)                                
+    return Gs
 
 def run_paralell(names, agents,delta_exp=0):
     with Pool() as pool:
@@ -118,11 +130,11 @@ def run_paralell(names, agents,delta_exp=0):
 
 def run_wireless_simulations():
 
-    #agents = [dqn_learner,dfhqn_learner,fhtlr_max_learner,fhtlr_true_learner]
+    #agents = [dqn_learner,dfhqn_learner,fhtlr_max_learner,fhtlr_true_learner,fhql,bf]
     #run_paralell(['dqn2','dfhqn2',"fhtlr2_max","fhtlr2_true"], agents)
     
-    agents = ['fhql']
-    names = ['fhql-100']
+    agents = ['fhrbf']
+    names = ['fhrbf-100']
     total_episodes = 100
     episodes_per_run = N_EXPS 
 
