@@ -59,7 +59,7 @@ class FHRBF:
         self.buffer = ReplayBuffer(buffer_size)
         self.discretizer = discretizer
         self.Q = FHRBFmodel(
-            len(discretizer.bucket_states),10, np.prod(discretizer.bucket_actions), H
+            len(discretizer.bucket_states),5, np.prod(discretizer.bucket_actions), H
         ).double()
         self.opt = Adamax(self.Q.parameters(), lr=alpha)
 

@@ -52,17 +52,17 @@ DISCRETIZER = Discretizer(
 )
 
 #Experiments
-EPISODES = 100_000
+EPISODES = 60_000
 BUFFER_SIZE = 1_000
 ALPHA_DQN = 0.01
 ALPHA_FHRBF = 0.1
 ALPHA_LINEAR = 0.1
-ALPHA_FHTLR = 0.1
+ALPHA_FHTLR = 0.01
 ALPHA_QL = 10
 K = 20
 SCALE = 0.5
 W_DECAY = 0.0
-EPS_DECAY = (0.9999)**(20_000/EPISODES)
+EPS_DECAY = (0.99999)**(20_000/40_000)
 N_EXPS = 100
 
 def generate_env():
@@ -120,7 +120,7 @@ def run_paralell(names, agents,n_exps,delta_exp=0):
 
     idx = 0
     for i, name in enumerate(names):
-        file_path = f"results/battery_{name}.npy"
+        file_path = f"results/wireless_{name}.npy"
         if os.path.exists(file_path):
             existing_data = np.load(file_path)
             combined_data = np.concatenate((existing_data, results[idx:idx + n_exps]), axis=0)
@@ -136,18 +136,18 @@ def run_wireless_simulations():
     #run_paralell(['dqn2','dfhqn2',"fhtlr2_max","fhtlr2_true"], agents)
 
     N_EXPS = 100
-    """run_paralell(['dqn-100'], ['dqn'],N_EXPS)
-    run_paralell(['dfhqn-100'], ['dfhqn'],N_EXPS)"""
-    run_paralell(['fhtlr_max-explore'], ['fhtlr_max'],N_EXPS)
-    run_paralell(['fhtlr_true-explore'], ['fhtlr_true'],N_EXPS)
-    """run_paralell(['fhbf'], ['fhbf'],N_EXPS)
-    run_paralell(['fhrbf'], ['fhrbf'],N_EXPS)
-    run_paralell(['fhql-100'], ['fhql'],N_EXPS)
+    #run_paralell(['dqn-explore'], ['dqn'],N_EXPS)
+    #run_paralell(['dfhqn-explore'], ['dfhqn'],N_EXPS)
+    #run_paralell(['fhtlr_max-explore'], ['fhtlr_max'],N_EXPS)
+    #run_paralell(['fhtlr_true-explore'], ['fhtlr_true'],N_EXPS)
+    #run_paralell(['fhbf'], ['fhbf'],N_EXPS)
+    run_paralell(['fhrbf-5'], ['fhrbf'],N_EXPS)
+    #run_paralell(['fhql-100'], ['fhql'],N_EXPS)
     
-    agents = ['fhql']
-    names = ['fhql-100']
+    """agents = ['fhql']
+    names = ['fhql-explore']
     total_episodes = N_EXPS
-    episodes_per_run = 50 
+    episodes_per_run = 3 
 
     full_runs = total_episodes // episodes_per_run
     remaining_episodes = total_episodes % episodes_per_run

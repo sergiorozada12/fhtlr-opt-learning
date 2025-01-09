@@ -149,7 +149,7 @@ class FHRBFmodel(torch.nn.Module):
             self.num_rbf_features = num_rbf_features
             center_h.append(torch.randn(num_rbf_features, num_inputs).double())
             linear_h.append(torch.nn.Linear(num_rbf_features, num_outputs))
-        self.centers_h = torch.nn.ParameterList(center_h)
+        self.centers_h = center_h
         self.linear_h = torch.nn.ParameterList(linear_h)
     def radial_basis(self, x,h):
         if x.dim() == 1:
