@@ -196,7 +196,7 @@ def plot_tensor_rank(Q_to_plot,name,max_rank =  25):
     with plt.style.context(["science"], ["ieee"]):
         matplotlib.rcParams.update({"font.size": 16})
 
-        fig = plt.figure(figsize=[5, 4])
+        fig = plt.figure(figsize=[5, 3])
         plt.plot(rangos, error, marker='o')
 
         # Configurar notación científica en los ejes
