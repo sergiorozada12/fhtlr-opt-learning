@@ -14,6 +14,10 @@ from src.trainer import run_test_episode,run_train_episode,run_experiment
 from src.plots import plot_wireless
 import os
 import pickle
+
+import random
+import numpy as np
+import torch
 #Enviroment
 GAMMA = 0.9
 H = 5
@@ -58,6 +62,7 @@ ALPHA_DQN = 0.01
 ALPHA_FHRBF = 0.1
 ALPHA_LINEAR = 0.1
 ALPHA_FHTLR = 0.01
+ALPHA_FHTLR_MAX = 0.05
 ALPHA_QL = 10
 K = 20
 SCALE = 0.5
@@ -91,14 +96,24 @@ def generate_env():
     return env
 
 def run_experiment_with_agent(agent_name, n_exp):
+    random.seed(n_exp)
+    np.random.seed(n_exp)
+    torch.manual_seed(n_exp)
     if agent_name == 'dqn':
         agent = Dqn(DISCRETIZER, ALPHA_DQN, GAMMA, BUFFER_SIZE)
     if agent_name == 'dfhqn':
         agent = DFHqn(DISCRETIZER, ALPHA_DQN, H, BUFFER_SIZE)
     if agent_name == "fhtlr_max":
-        agent = FHMaxTlr(DISCRETIZER, ALPHA_FHTLR, H, K, SCALE, w_decay=W_DECAY)
-    if agent_name == "fhtlr_true":
-        agent = FHTlr(DISCRETIZER, ALPHA_FHTLR, H, K, SCALE, w_decay=W_DECAY)
+        agent = FHMaxTlr(DISCRETIZER, ALPHA_FHTLR_MAX, H, K, SCALE, w_decay=W_DECAY)
+    if agent_name == "fhtlr_true1":
+        alpha=0.01
+        agent = FHTlr(DISCRETIZER, alpha, H, K, SCALE, w_decay=W_DECAY)
+    if agent_name == "fhtlr_true2":
+        alpha=0.02
+        agent = FHTlr(DISCRETIZER, alpha, H, K, SCALE, w_decay=W_DECAY)   
+    if agent_name == "fhtlr_true5":
+        alpha=0.05
+        agent = FHTlr(DISCRETIZER, alpha, H, K, SCALE, w_decay=W_DECAY)
     if agent_name == "fhql":
         agent = FHQLearning(DISCRETIZER, ALPHA_QL, H, 0.1, 1)
     if agent_name == "fhbf":
@@ -138,10 +153,12 @@ def run_wireless_simulations():
     N_EXPS = 100
     #run_paralell(['dqn-explore'], ['dqn'],N_EXPS)
     #run_paralell(['dfhqn-explore'], ['dfhqn'],N_EXPS)
-    #run_paralell(['fhtlr_max-explore'], ['fhtlr_max'],N_EXPS)
+    run_paralell(['fhtlr_true-explore-lr01'], ['fhtlr_true1'],N_EXPS)
+    run_paralell(['fhtlr_true-explore-lr02'], ['fhtlr_true2'],N_EXPS)
+    run_paralell(['fhtlr_true-explore-lr05'], ['fhtlr_true5'],N_EXPS)
     #run_paralell(['fhtlr_true-explore'], ['fhtlr_true'],N_EXPS)
     #run_paralell(['fhbf'], ['fhbf'],N_EXPS)
-    run_paralell(['fhrbf-5'], ['fhrbf'],N_EXPS)
+    #run_paralell(['fhrbf-5'], ['fhrbf'],N_EXPS)
     #run_paralell(['fhql-100'], ['fhql'],N_EXPS)
     
     """agents = ['fhql']
