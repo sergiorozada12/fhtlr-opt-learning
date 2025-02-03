@@ -21,11 +21,12 @@ class FHTlr:
         lr_decayment: float = None,
         lr_decayment_step: int = None,
         w_decay: float = 0.0,
+        buffer_size: int = 1,
     ) -> None:
         self.alpha = alpha
         self.H = H
 
-        self.buffer = ReplayBuffer(1)
+        self.buffer = ReplayBuffer(buffer_size)
         self.discretizer = discretizer
         self.Q = PARAFAC(
             np.concatenate(
@@ -95,11 +96,12 @@ class FHMaxTlr:
         lr_decayment: float = None,
         lr_decayment_step: int = None,
         w_decay: float = 0.0,
+        buffer_size: int = 1,
     ) -> None:
         self.alpha = alpha
         self.H = H
 
-        self.buffer = ReplayBuffer(1)
+        self.buffer = ReplayBuffer(buffer_size)
         self.discretizer = discretizer
         self.Q = PARAFAC(
             np.concatenate(
