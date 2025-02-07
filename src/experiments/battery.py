@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from functools import partial
+import torch
 
 from src.environments import BatteryChargingEnv
 from src.utils import Discretizer
@@ -14,6 +15,8 @@ from src.trainer import run_test_episode,run_train_episode,run_experiment
 from src.plots import plot_wireless
 import os
 import pickle
+
+torch.set_num_threads(1)
 
 #Enviroment
 GAMMA = 0.99
