@@ -45,6 +45,7 @@ SCALE_true = 0.1
 SCALE_QL = 0.01
 W_DECAY = 0.0
 EPS_DECAY = (0.9999)**(30_000/EPISODES)
+BUFFER_SIZE_TLR = 5
 #N_EXPS = 100
 
 def generate_env():
@@ -57,9 +58,9 @@ def run_experiment_with_agent(agent_name, n_exp):
     if agent_name == 'dfhqn':
         agent = DFHqn(DISCRETIZER, ALPHA_DQN, H, BUFFER_SIZE)
     if agent_name == "fhtlr_max":
-        agent = FHMaxTlr(DISCRETIZER, ALPHA_FHTLR_max, H, K, SCALE_max, w_decay=W_DECAY)
+        agent = FHMaxTlr(DISCRETIZER, ALPHA_FHTLR_max, H, K, SCALE_max, w_decay=W_DECAY, buffer_size=BUFFER_SIZE_TLR)
     if agent_name == "fhtlr_true":
-        agent = FHTlr(DISCRETIZER, ALPHA_FHTLR_true, H, K, SCALE_true, w_decay=W_DECAY)
+        agent = FHTlr(DISCRETIZER, ALPHA_FHTLR_true, H, K, SCALE_true, w_decay=W_DECAY, buffer_size=BUFFER_SIZE_TLR)
     if agent_name == "fhql":
         agent = FHQLearning(DISCRETIZER, ALPHA_QL, H, SCALE_QL, 1000)
     if agent_name == "fhbf":
@@ -97,13 +98,13 @@ def run_battery_simulations():
     #run_paralell(['dqn2','dfhqn2',"fhtlr2_max","fhtlr2_true"], agents)
 
     N_EXPS = 100
-    run_paralell(['dqn-100'], ['dqn'],N_EXPS)
-    run_paralell(['dfhqn-100'], ['dfhqn'],N_EXPS)
+    #run_paralell(['dqn-100'], ['dqn'],N_EXPS)
+    #run_paralell(['dfhqn-100'], ['dfhqn'],N_EXPS)
     run_paralell(['fhtlr_max-explore'], ['fhtlr_max'],N_EXPS)
     run_paralell(['fhtlr_true-explore'], ['fhtlr_true'],N_EXPS)
-    run_paralell(['fhbf-explore'], ['fhbf'],N_EXPS)
-    run_paralell(['fhrbf-explore'], ['fhrbf'],N_EXPS)
-    run_paralell(['fhql-100'], ['fhql'],N_EXPS)
+    #run_paralell(['fhbf-explore'], ['fhbf'],N_EXPS)
+    #run_paralell(['fhrbf-explore'], ['fhrbf'],N_EXPS)
+    #run_paralell(['fhql-100'], ['fhql'],N_EXPS)
     
     """agents = ['fhql']
     names = ['fhql-100']

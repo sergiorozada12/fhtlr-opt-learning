@@ -112,13 +112,13 @@ def run_experiment_with_agent(agent_name, n_exp):
         agent = FHMaxTlr(DISCRETIZER, ALPHA_FHTLR_MAX, H, K, SCALE, w_decay=W_DECAY, buffer_size=BUFFER_SIZE_TLR)
     if agent_name == "fhtlr_true1":
         alpha=0.01
-        agent = FHTlr(DISCRETIZER, alpha, H, K, SCALE, w_decay=W_DECAY, buffer_size=BUFFER_SIZE)
+        agent = FHTlr(DISCRETIZER, alpha, H, K, SCALE, w_decay=W_DECAY, buffer_size=BUFFER_SIZE_TLR)
     if agent_name == "fhtlr_true2":
         alpha=0.02
-        agent = FHTlr(DISCRETIZER, alpha, H, K, SCALE, w_decay=W_DECAY, buffer_size=BUFFER_SIZE)   
+        agent = FHTlr(DISCRETIZER, alpha, H, K, SCALE, w_decay=W_DECAY, buffer_size=BUFFER_SIZE_TLR)   
     if agent_name == "fhtlr_true5":
         alpha=0.05
-        agent = FHTlr(DISCRETIZER, alpha, H, K, SCALE, w_decay=W_DECAY, buffer_size=BUFFER_SIZE)
+        agent = FHTlr(DISCRETIZER, alpha, H, K, SCALE, w_decay=W_DECAY, buffer_size=BUFFER_SIZE_TLR)
     if agent_name == "fhql":
         agent = FHQLearning(DISCRETIZER, ALPHA_QL, H, 0.1, 1)
     if agent_name == "fhbf":
