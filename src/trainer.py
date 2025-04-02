@@ -46,7 +46,4 @@ def run_experiment(
         if e % 10 == 0:
             G = run_test_episode(env, agent, H)
             Gs.append(G)
-
-        #if hasattr(agent, "scheduler"):
-        #    agent.scheduler.step()
     return Gs
