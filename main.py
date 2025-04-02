@@ -5,4 +5,4 @@ from src.experiments.battery import run_battery_simulations
 
 if __name__ == "__main__":
     run_wireless_simulations()
-    #run_battery_simulations()
+    run_battery_simulations()
