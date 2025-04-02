@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from functools import partial
 import torch
+import random
 
 from src.environments import BatteryChargingEnv
 from src.utils import Discretizer
@@ -21,9 +22,9 @@ torch.set_num_threads(1)
 #Enviroment
 GAMMA = 0.99
 H = 5
-
+ 
 ENV = BatteryChargingEnv(H=H)
-
+ 
 DISCRETIZER = Discretizer(
     min_points_states=[0, 0, 0, 0],
     max_points_states=[1, 1, 1, 1],
@@ -32,13 +33,15 @@ DISCRETIZER = Discretizer(
     max_points_actions=[1, 1, 1],
     bucket_actions=[10, 10, 10],
 )
-
+ 
 #Experiments
-EPISODES = 20_000
+EPISODES = 30_000
 BUFFER_SIZE = 1_000
 ALPHA_DQN = 0.1
 ALPHA_FHTLR_max = 0.1
 ALPHA_FHTLR_true = 0.05
+ALPHA_FHTLR_max_er = 0.05
+ALPHA_FHTLR_true_er = 0.01
 ALPHA_QL = 10
 ALPHA_FHRBF = 0.1
 ALPHA_LINEAR = 0.1
@@ -56,14 +59,21 @@ def generate_env():
     return env
 
 def run_experiment_with_agent(agent_name, n_exp):
+    random.seed(n_exp)
+    np.random.seed(n_exp)
+    torch.manual_seed(n_exp)
     if agent_name == 'dqn':
         agent = Dqn(DISCRETIZER, ALPHA_DQN, GAMMA, BUFFER_SIZE)
     if agent_name == 'dfhqn':
         agent = DFHqn(DISCRETIZER, ALPHA_DQN, H, BUFFER_SIZE)
     if agent_name == "fhtlr_max":
-        agent = FHMaxTlr(DISCRETIZER, ALPHA_FHTLR_max, H, K, SCALE_max, w_decay=W_DECAY, buffer_size=BUFFER_SIZE_TLR)
+        agent = FHMaxTlr(DISCRETIZER, ALPHA_FHTLR_max, H, K, SCALE_max, w_decay=W_DECAY, buffer_size=1)
     if agent_name == "fhtlr_true":
-        agent = FHTlr(DISCRETIZER, ALPHA_FHTLR_true, H, K, SCALE_true, w_decay=W_DECAY, buffer_size=BUFFER_SIZE_TLR)
+        agent = FHTlr(DISCRETIZER, ALPHA_FHTLR_true, H, K, SCALE_true, w_decay=W_DECAY, buffer_size=1)
+    if agent_name == "fhtlr_max_er":
+        agent = FHMaxTlr(DISCRETIZER, ALPHA_FHTLR_max_er, H, K, SCALE_max, w_decay=W_DECAY, buffer_size=BUFFER_SIZE_TLR)
+    if agent_name == "fhtlr_true_er":
+        agent = FHTlr(DISCRETIZER, ALPHA_FHTLR_true_er, H, K, SCALE_true, w_decay=W_DECAY, buffer_size=BUFFER_SIZE_TLR)
     if agent_name == "fhql":
         agent = FHQLearning(DISCRETIZER, ALPHA_QL, H, SCALE_QL, 1000)
     if agent_name == "fhbf":
@@ -79,7 +89,7 @@ def run_experiment_with_agent(agent_name, n_exp):
         pickle.dump(agent, f)"""                                
     return Gs
 
-def run_paralell(names, agents,n_exps,delta_exp=0):
+def run_paralell(names, agents, n_exps, delta_exp=0):
     with Pool() as pool:
         results = pool.starmap(run_experiment_with_agent, [(agents[i], n_exp+delta_exp) for i in range(len(agents)) for n_exp in range(n_exps)])
 
@@ -101,13 +111,15 @@ def run_battery_simulations():
     #run_paralell(['dqn2','dfhqn2',"fhtlr2_max","fhtlr2_true"], agents)
 
     N_EXPS = 100
-    #run_paralell(['dqn-100'], ['dqn'],N_EXPS)
-    #run_paralell(['dfhqn-100'], ['dfhqn'],N_EXPS)
-    run_paralell(['fhtlr_max-explore'], ['fhtlr_max'],N_EXPS)
-    run_paralell(['fhtlr_true-explore'], ['fhtlr_true'],N_EXPS)
-    #run_paralell(['fhbf-explore'], ['fhbf'],N_EXPS)
-    #run_paralell(['fhrbf-explore'], ['fhrbf'],N_EXPS)
-    #run_paralell(['fhql-100'], ['fhql'],N_EXPS)
+    #run_paralell(['dqn'], ['dqn'], N_EXPS)
+    #run_paralell(['dfhqn'], ['dfhqn'], N_EXPS)
+    #run_paralell(['fhtlr_max'], ['fhtlr_max'], N_EXPS)
+    #run_paralell(['fhtlr_true'], ['fhtlr_true'], N_EXPS)
+    run_paralell(['fhtlr_max_er'], ['fhtlr_max_er'], N_EXPS)
+    #run_paralell(['fhtlr_true_er'], ['fhtlr_true_er'], N_EXPS)
+    #run_paralell(['fhbf'], ['fhbf'],N_EXPS)
+    #run_paralell(['fhrbf'], ['fhrbf'],N_EXPS)
+    #run_paralell(['fhql'], ['fhql'],N_EXPS)
     
     """agents = ['fhql']
     names = ['fhql-100']
