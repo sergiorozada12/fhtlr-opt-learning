@@ -1,56 +1,188 @@
 import numpy as np
-
+import pickle
 from src.environments import GridWorldEnv
 from src.agents.ql import QLearning, FHQLearning
 from src.agents.dp import BackwardPropagation, FrontPolicyImprovement, BackPolicyImprovement
 from src.utils import Discretizer
 from src.trainer import run_experiment
 from src.plots import plot_gridworld, plot_errors, plot_tensor_rank
+from src.agents.bcd_grid import bcd, bcgd
+from src.models import PARAFAC
 
+Tamaño = 5
 
-ALPHA_Q = 0.9
-ALPHA_TLR = 0.001
-GAMMA = 0.99
-E = 50_000
-H = 5
-EPS = 1.0
-EPS_DECAY = 0.9999
-K = 8
-SCALE = 0.1
+ENV = GridWorldEnv(nS =Tamaño*Tamaño,W = Tamaño, H = Tamaño, nA=5)
 
-ENV = GridWorldEnv()
-
-DISCRETIZER = Discretizer(
+discretizer = Discretizer(
     min_points_states=[0, 0],
     max_points_states=[4, 4],
-    bucket_states=[5, 5],
+    bucket_states=[Tamaño,Tamaño],
     min_points_actions=[0],
-    max_points_actions=[3],
-    bucket_actions=[4],
+    max_points_actions=[4],
+    bucket_actions=[5],
 )
 
+#Hyperparameters
+
+BCD_PE_k_list = [15,25,30]
+BCD_PE_Q_scale = 1
+BCD_PE_num_iter = 500
+
+BCGD_PE_k_list = [15,25,30]
+BCGD_PE_Q_scale = 0.5
+BCGD_PE_num_iter = 2000
+BCGD_PE_alpha = 10e-3
+
+BCD_PI_k_list = [15, 25, 30]
+BCD_PI_scale = 0.7
+BCD_PI_bcd_num_iter = 5
+BCD_PI_policy_num_iter = 100
+
+BCGD_PI_k_list = [15, 25, 30]
+BCGD_PI_scale = 0.5
+BCGD_PI_bcd_num_iter = 50
+BCGD_PI_policy_num_iter = 2000
+BCGD_PI_alpha = 10e-3
+
+def BCD_PE_exp(Q_opt, Pi):
+
+    fo_list = []
+    errors_list = []
+    conv_list = []
+
+    for k in BCD_PE_k_list:
+        Q = PARAFAC(
+                np.concatenate(
+                    [[ENV.H], discretizer.bucket_states, discretizer.bucket_actions]
+                ),
+                k=k,
+                scale= BCD_PE_Q_scale,
+                nA=len(discretizer.bucket_actions),
+            ).double()
+        
+        bcd_inv = bcd(Q,Pi,discretizer,ENV,k,Q_opt.reshape(ENV.H,ENV.W,ENV.W,ENV.nA))
+
+        fo_values,errors,convs, Q = bcd_inv.run(BCD_PE_num_iter)
+        fo_list.append(fo_values)
+        errors_list.append(errors)
+        conv_list.append(convs)
+    
+    data = [fo_list, errors_list, conv_list]
+
+    with open('results/gridworld_bcd_pe.pkl', 'wb') as f:
+        pickle.dump(data, f)  # serialize using dump()
+
+
+def BCGD_PE_exp(Q_opt, Pi):
+
+    fo_list = []
+    errors_list = []
+    conv_list = []
+
+    for k in BCGD_PE_k_list:
+        Q = PARAFAC(
+                np.concatenate(
+                    [[ENV.H], discretizer.bucket_states, discretizer.bucket_actions]
+                ),
+                k=k,
+                scale= BCGD_PE_Q_scale,
+                nA=len(discretizer.bucket_actions),
+            ).double()
+        
+        bcd_grad = bcgd(Q,Pi,discretizer,ENV,k,Q_opt.reshape(ENV.H,ENV.W,ENV.W,ENV.nA),BCGD_PE_alpha)
+
+        fo_values,errors,convs, Q = bcd_grad.run(BCGD_PE_num_iter)
+        fo_list.append(fo_values)
+        errors_list.append(errors)
+        conv_list.append(convs)
+    
+        data = [fo_list, errors_list, conv_list]
+
+    with open('results/gridworld_bcgd_pe.pkl', 'wb') as f:
+        pickle.dump(data, f)  # serialize using dump()
+
+def BCD_PI_exp(Q_opt, Pi):
+    
+    fo_list = []
+    errors_list = []
+    conv_list = []
+    returns_mean_list = []
+    returns_std_list = []
+
+    for k in BCD_PI_k_list:
+        Q = PARAFAC(
+                    np.concatenate(
+                        [[ENV.H], discretizer.bucket_states, discretizer.bucket_actions]
+                    ),
+                    k=k,
+                    scale= BCD_PI_scale,
+                    nA=len(discretizer.bucket_actions),
+                ).double()
+
+        bcd_inv = bcd(Q,Pi,discretizer,ENV,k,Q_opt.reshape(ENV.H,ENV.W,ENV.W,ENV.nA))
+
+        fo_values,errors,convs,returns_mean,returns_std, Q = bcd_inv.bcd_policy_improvement(BCD_PI_policy_num_iter,BCD_PI_bcd_num_iter)
+        fo_list.append(fo_values)
+        errors_list.append(errors)
+        conv_list.append(convs)
+        returns_mean_list.append(returns_mean)
+        returns_std_list.append(returns_std)
+
+    data = [fo_list, errors_list, conv_list, returns_mean_list, returns_std_list]
+    with open('results/gridworld_bcd_pi.pkl', 'wb') as f:
+        pickle.dump(data, f)  # serialize using dump()
+
+def BCGD_PI_exp(Q_opt, Pi):
+
+    fo_list = []
+    errors_list = []
+    conv_list = []
+    returns_mean_list = []
+    returns_std_list = []
+
+    for k in BCGD_PI_k_list:
+        Q = PARAFAC(
+                    np.concatenate(
+                        [[ENV.H], discretizer.bucket_states, discretizer.bucket_actions]
+                    ),
+                    k=k,
+                    scale= BCGD_PI_scale,
+                    nA=len(discretizer.bucket_actions),
+                ).double()
+
+        bcd_grad = bcgd(Q,Pi,discretizer,ENV,k,Q_opt.reshape(ENV.H,ENV.W,ENV.W,ENV.nA),BCGD_PI_alpha)
+        fo_values,errors,convs,returns_mean,returns_std, Q = bcd_grad.bcgd_policy_improvement(BCGD_PI_policy_num_iter,BCGD_PI_bcd_num_iter)
+        fo_list.append(fo_values)
+        errors_list.append(errors)
+        conv_list.append(convs)
+        returns_mean_list.append(returns_mean)
+        returns_std_list.append(returns_std)
+
+    data = [fo_list, errors_list, conv_list, returns_mean_list, returns_std_list]
+    with open('results/gridworld_bcgd_pi.pkl', 'wb') as f:
+        pickle.dump(data, f)  # serialize using dump()
 
 def run_gridworld_simulations():
 
-    fhq_learner = FHQLearning(DISCRETIZER, ALPHA_Q, H)
-    bp_learner = BackwardPropagation(H,ENV.nS,ENV.nA,ENV.R,ENV.P)
-    fpi_learner = FrontPolicyImprovement(H,ENV.nS,ENV.nA,ENV.R,ENV.P)
-    bpi_learner = BackPolicyImprovement(H,ENV.nS,ENV.nA,ENV.R,ENV.P)
-
+    # RANK ANALISYS FOR Q*
+    bp_learner = BackwardPropagation(ENV.H,ENV.nS,ENV.nA,ENV.R,ENV.P)
     _ = bp_learner.run()
-    _, error_fpi = fpi_learner.run()
-    _, error_bpi = bpi_learner.run()
-    _ = run_experiment(0, E, H, EPS, EPS_DECAY, ENV, fhq_learner)
+    Q_opt =  bp_learner.Q
+    Pi_opt = np.zeros((ENV.H,ENV.nS, ENV.nA))
+    for h in range(ENV.H):
+        for s in range(ENV.nS):
+            #a = np.argmax(Q.forward(np.array([h, s])).detach().numpy())
+            a = np.argmax(Q_opt[h,s,:])
+            Pi_opt[h,s, a] = 1
 
-    mat_q = np.max(fhq_learner.Q, axis=3)[0].reshape(ENV.W, ENV.W)
+    # POLICY EVALUATION WITH BCD
+    BCD_PE_exp(Q_opt,Pi_opt)
 
-    print(f"La diferencia entre fhq y bp es {np.linalg.norm(fhq_learner.Q-bp_learner.q_reshape(DISCRETIZER))}")
-    print(f"La diferencia entre fhq y fpi es {np.linalg.norm(fhq_learner.Q-fpi_learner.q_reshape(DISCRETIZER))}")
-    print(f"La diferencia entre fhq y bpi es {np.linalg.norm(fhq_learner.Q-bpi_learner.q_reshape(DISCRETIZER))}")
+    #POLICY EVALUATION WITH BCGD
+    BCGD_PE_exp(Q_opt,Pi_opt)
 
-    plot_errors(error_fpi,"Front Policy Iteration")
-    plot_errors(error_bpi, "Back Policy Iteration")
-    plot_tensor_rank(fhq_learner.Q, "FHQ_Learner")
+    # POLICY EVALUATION WITH BCD
+    BCD_PI_exp(Q_opt,Pi_opt)
 
-
-
+    #POLICY EVALUATION WITH BCGD
+    BCGD_PI_exp(Q_opt,Pi_opt)

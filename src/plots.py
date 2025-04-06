@@ -1,12 +1,10 @@
 import numpy as np
-
 import matplotlib
 import matplotlib.pyplot as plt
 import scienceplots
 from matplotlib.ticker import ScalarFormatter
 from PIL import Image
 from matplotlib import cm
-
 import tensorly as tl
 from tensorly.decomposition import parafac
 
@@ -15,14 +13,15 @@ def plot_gridworld(W, mat_q_stationary, mat_q, mat_tlr,Q_list):
     plot_gridworld_Q(W, mat_q_stationary, mat_q, mat_tlr)
     plot_gridwolrd_R(W)
     draw_grid_with_arrows(Q_list)
+    draw_cmap()
     # Lista de imágenes
-    fotos = ["figures/fig_R.jpg", "figures/fig_Q_right.jpg", "figures/arrows.jpg"]
-    output="figures/Q.jpg"
+    fotos = ["figures/fig_R.jpg", "figures/fig_Q_right.jpg", "figures/arrows.jpg", "figures/cmap.jpg"]
+    output="figures/paper_Q.jpg"
     # Cargar las imágenes
     imagenes = [Image.open(foto) for foto in fotos]
 
     # Obtener el tamaño máximo de cada fila y columna
-    ancho_total = imagenes[0].size[0] + imagenes[1].size[0]
+    ancho_total = int(imagenes[0].size[0] + imagenes[1].size[0] + imagenes[3].size[0])
     alto_total = imagenes[0].size[1]
 
     # Crear un lienzo vacío para el mosaico
@@ -30,8 +29,9 @@ def plot_gridworld(W, mat_q_stationary, mat_q, mat_tlr,Q_list):
 
     # Colocar las imágenes en el lienzo
     mosaic.paste(imagenes[0], (0, 0))  # Esquina superior izquierda
-    mosaic.paste(imagenes[1], (imagenes[0].size[0], 0))  # Esquina superior derecha
-    mosaic.paste(imagenes[2], (imagenes[0].size[0] - 35, imagenes[1].size[1]))  # Esquina inferior derecha
+    mosaic.paste(imagenes[2], (imagenes[0].size[0], 0))  # Esquina superior derecha
+    mosaic.paste(imagenes[3], (imagenes[0].size[0] + imagenes[2].size[0], 0))  # Esquina inferior derecha
+    
 
     # Guardar o mostrar el mosaico
     mosaic.save(output)
@@ -46,10 +46,10 @@ def plot_gridwolrd_R(W):
 
     # Usar estilo
     with plt.style.context(["science", "ieee"]):
-        matplotlib.rcParams.update({"font.size": 14})
+        matplotlib.rcParams.update({"font.size": 16})
 
         # Crear una fila de subplots
-        fig, axarr = plt.subplots(1, 1, figsize=(8, 8), constrained_layout=True)
+        fig, axarr = plt.subplots(1, 1, figsize=(4, 4), constrained_layout=True)
 
         vmin = 0.0
         vmax = 1.0
@@ -60,7 +60,7 @@ def plot_gridwolrd_R(W):
             for j in range(W):
                 v = np.around(mat_r[i, j], 3)
                 axarr.text(j, i, v, ha="center", va="bottom", color="silver")
-        axarr.set_title("(a)", fontsize=14)
+        axarr.set_xlabel("(a)", fontsize=16)
 
         axarr.set_xticks([])
         axarr.set_yticks([])
@@ -77,7 +77,7 @@ def plot_gridworld_Q(W, mat_q_stationary, mat_q, mat_tlr):
 
     # Usar estilo
     with plt.style.context(["science", "ieee"]):
-        matplotlib.rcParams.update({"font.size": 14})
+        matplotlib.rcParams.update({"font.size": 16})
 
         # Crear una fila de subplots
         fig, axarr = plt.subplots(1, 3, figsize=(12, 4), constrained_layout=True)
@@ -99,7 +99,7 @@ def plot_gridworld_Q(W, mat_q_stationary, mat_q, mat_tlr):
             for j in range(W):
                 v = np.around(mat_q_stationary[i, j], 3)
                 axarr[0].text(j, i, v, ha="center", va="bottom", color="silver")
-        axarr[0].set_title("(b)", fontsize=14)
+        axarr[0].set_title("(b)", fontsize=16)
 
         # Tercer gráfico (mat_q)
         axarr[1].imshow(mat_q, vmin=vmin, vmax=vmax, cmap="Reds")
@@ -107,7 +107,7 @@ def plot_gridworld_Q(W, mat_q_stationary, mat_q, mat_tlr):
             for j in range(W):
                 v = np.around(mat_q[i, j], 3)
                 axarr[1].text(j, i, v, ha="center", va="bottom", color="silver")
-        axarr[1].set_title("(c)", fontsize=14)
+        axarr[1].set_title("(c)", fontsize=16)
 
         # Cuarto gráfico (mat_tlr)
         axarr[2].imshow(mat_tlr, vmin=vmin, vmax=vmax, cmap="Reds")
@@ -115,7 +115,7 @@ def plot_gridworld_Q(W, mat_q_stationary, mat_q, mat_tlr):
             for j in range(W):
                 v = np.around(mat_tlr[i, j], 3)
                 axarr[2].text(j, i, v, ha="center", va="bottom", color="silver")
-        axarr[2].set_title("(d)", fontsize=14)
+        axarr[2].set_title("(d)", fontsize=16)
 
         # Ajustar los ejes
         for ax in axarr:
@@ -196,7 +196,7 @@ def plot_tensor_rank(Q_to_plot,name,max_rank =  25):
     with plt.style.context(["science"], ["ieee"]):
         matplotlib.rcParams.update({"font.size": 16})
 
-        fig = plt.figure(figsize=[5, 3])
+        fig = plt.figure(figsize=[5, 4])
         plt.plot(rangos, error, marker='o')
 
         # Configurar notación científica en los ejes
@@ -233,11 +233,12 @@ def find_max_positions(array):
 def draw_grid_with_arrows(Q_list):
     cmap = cm.get_cmap('Reds')
 
-    # Extraer un rojo oscuro del colormap (el más intenso, valor 1.0)
-    red_from_cmap = cmap(1.0)  # RGBA correspondiente al rojo oscuro más inte
-    white_from_cmap = cmap(0)  # RGBA correspondiente al rojo oscuro más inte
+    # Extraer colores del colormap
+    red_from_cmap = cmap(1.0)  # Rojo oscuro
+    white_from_cmap = cmap(0)  # Blanco o color claro
+
     # Configuración de la figura
-    fig, ax = plt.subplots(1, len(Q_list), figsize=(12, 4))
+    fig, ax = plt.subplots(1, len(Q_list), figsize=(12, 4), constrained_layout=True)
 
     # Coordenadas de las flechas para la cuadrícula 5x5
     grid_size = 5
@@ -246,40 +247,81 @@ def draw_grid_with_arrows(Q_list):
 
     # Flechas en todas las direcciones
     directions = [(0, 0.3), (-0.3, 0), (0, -0.3), (0.3, 0)]  # (dx, dy) arriba, abajo, derecha, izquierda
-
-
+    xlabel = ["b", "c", "d"]
     # Dibujar las 3 imágenes
     for idx, ax_idx in enumerate(ax):
         Q2print = Q_list[idx]
         ax_idx.set_xlim(-0.5, grid_size - 0.5)
         ax_idx.set_ylim(-0.5, grid_size - 0.5)
-        #ax_idx.set_xticks(np.arange(-0.5, grid_size, 1), minor=True)
-        #ax_idx.set_yticks(np.arange(-0.5, grid_size, 1), minor=True)
-        #ax_idx.grid(which="minor", color="black", linestyle='-', linewidth=1)
         ax_idx.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+        ax_idx.set_xlabel(f"({xlabel[idx]})", fontsize=16)
 
         # Dibujar flechas en cada celda
         for i in range(grid_size):
             for j in range(grid_size):
                 if not((i == 0 and j == 4) or (i == 4 and j == 0) or (i == 4 and j == 4) or (i == 0 and j == 0)):
-                    #print(i,4-j,Q2print[i,4-j,:])
-                    if np.max(Q2print[i,4-j,:]) > 0.5:
-                        rect = plt.Rectangle((i - 0.5, j - 0.5), 1, 1, color=red_from_cmap, alpha=1)
-                        ax_idx.add_patch(rect)
-                    else:
-                        rect = plt.Rectangle((i - 0.5, j - 0.5), 1, 1, color=white_from_cmap, alpha=1)
-                        ax_idx.add_patch(rect)
-                    direction_ids = find_max_positions(Q2print[i,4-j,:])
+                    intensity = np.max(Q2print[i, 4 - j, :])
+                    rect = plt.Rectangle((i - 0.5, j - 0.5), 1, 1, color=cmap(intensity), alpha=1)
+                    ax_idx.add_patch(rect)
+
+                    direction_ids = find_max_positions(Q2print[i, 4 - j, :])
                     for dir_id in direction_ids:
-                        if dir_id != 4 :
+                        if dir_id != 4:
                             dx, dy = directions[dir_id]
-                            ax_idx.arrow(i, j, dx, dy, head_width=0.05, head_length=0.05, fc='grey', ec='grey',alpha=0.7)
+                            ax_idx.arrow(i, j, dx, dy, head_width=0.05, head_length=0.05, fc='grey', ec='grey', alpha=0.7)
                         else:
-                            ax_idx.plot(i, j, 'o', color='grey', markersize=6,alpha=0.7)                     
+                            ax_idx.plot(i, j, 'o', color='grey', markersize=6, alpha=0.7)
                 else:
                     rect = plt.Rectangle((i - 0.5, j - 0.5), 1, 1, color=white_from_cmap, alpha=1)
                     ax_idx.add_patch(rect)
-                    ax_idx.plot(i, j, 'o', color='grey', markersize=6,alpha=0.7) 
+                    ax_idx.plot(i, j, 'o', color='grey', markersize=6, alpha=0.7)
 
-    plt.tight_layout()
-    plt.savefig("figures/arrows.jpg",dpi = 300)
+
+    plt.savefig("figures/arrows.jpg", dpi=300)
+    plt.clf()
+
+def draw_cmap():  
+    cmap = cm.get_cmap('Reds')
+    fig, axarr = plt.subplots(1, 1, figsize=(1, 4), constrained_layout=True)
+    axarr.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+
+    for spine in axarr.spines.values():
+        spine.set_visible(False)
+    # Usar estilo
+    with plt.style.context(["science", "ieee"]):
+        plt.rcParams.update({'font.size': 14})  # Cambiar globalmente el tamaño de la fuente de la figura
+        # Crear un eje específico para la barra de colores
+        cax = fig.add_axes([0, 0.2, 0.3, 0.87])  # [left, bottom, width, height]
+        
+        # Añadir la barra de colores
+        norm = plt.Normalize(vmin=0, vmax=1)  # Normalizar el rango de intensidades (0 a 1)
+        sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])  # Se requiere para crear la barra de colores
+        cbar = fig.colorbar(sm, cax=cax)
+
+        # Etiqueta de la barra de colores
+        cbar.set_label("Expecetd Return", fontsize=16)
+        fig.savefig("figures/cmap.jpg", dpi=300)
+        plt.clf()
+
+
+def crear_mosaico(fotos, output="figures/PI-PI-final.png"):
+    # Cargar las imágenes
+    imagenes = [Image.open(foto) for foto in fotos]
+
+    # Obtener el tamaño máximo de cada fila y columna
+    ancho_total = max(img.size[0] for img in imagenes[:2]) + max(img.size[0] for img in imagenes[2:])
+    alto_total = max(img.size[1] for img in imagenes[0::2]) + max(img.size[1] for img in imagenes[1::2])
+
+    # Crear un lienzo vacío para el mosaico
+    mosaic = Image.new("RGB", (ancho_total, alto_total))
+
+    # Colocar las imágenes en el lienzo
+    mosaic.paste(imagenes[0], (0, 0))  # Esquina superior izquierda
+    mosaic.paste(imagenes[1], (max(img.size[0] for img in imagenes[:2]), 0))  # Esquina superior derecha
+    mosaic.paste(imagenes[2], (0, max(img.size[1] for img in imagenes[0::2])))  # Esquina inferior izquierda
+    mosaic.paste(imagenes[3], (max(img.size[0] for img in imagenes[:2]), max(img.size[1] for img in imagenes[0::2])))  # Esquina inferior derecha
+
+    # Guardar o mostrar el mosaico
+    mosaic.save(output)
+    mosaic.show()
