@@ -42,15 +42,15 @@ class QLearning:
 
 
 class FHQLearning:
-    def __init__(self, discretizer: Discretizer, alpha: float, H: int) -> None:
+    def __init__(self, discretizer: Discretizer, alpha: float, H: int, scale: float, buffer_size: int) -> None:
         self.alpha = alpha
         self.H = H
 
-        self.buffer = ReplayBuffer(1)
+        self.buffer = ReplayBuffer(buffer_size)
         self.discretizer = discretizer
-        self.Q = np.zeros(
-            np.concatenate([[H], discretizer.bucket_states, discretizer.bucket_actions])
-        )
+        self.Q = np.random.randn(
+            *np.concatenate([[H], discretizer.bucket_states, discretizer.bucket_actions])
+        ) * scale
 
     def select_random_action(self) -> np.ndarray:
         a_idx = tuple(np.random.randint(self.discretizer.bucket_actions).tolist())

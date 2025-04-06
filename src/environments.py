@@ -2,6 +2,7 @@ from typing import List, Tuple
 
 import numpy as np
 import gymnasium as gym
+from gymnasium import spaces
 import matrix_mdp
 
 
@@ -183,14 +184,11 @@ class WirelessCommunicationsEnv:
         self.queue[self.t] = self.queue[self.t - 1] - packets
         self.queue[self.t] = max(0, self.queue[self.t])
 
-        r = 0
-        done = False
-        if self.t == self.T:
-            r += (
-                self.batt_weight * np.log(1 + self.batt[self.T])
-                - self.queue_weight * self.queue[self.T]
-            )
-            done = True
+        r = (
+            self.batt_weight * np.log(1 + self.batt[self.t])
+            - self.queue_weight * self.queue[self.t]
+        )
+        done = self.t == self.T
 
         return self._get_obs(self.t), r, done, None, None
 
@@ -203,9 +201,7 @@ class WirelessCommunicationsEnv:
         self.queue = np.zeros(self.T + 1)
         self.batt = np.zeros(self.T + 1)
 
-        self.h[:, 0] = np.sqrt(0.5 * self.snr) * (
-            np.random.randn(self.K) + 1j * np.random.randn(self.K)
-        )
+        self.h[:, 0] = np.sqrt(0.5 * self.snr) * 0.5
         self.g[:, 0] = np.abs(self.h[:, 0]) ** 2
         self.occ[:, 0] = self.occ_initial
         self.queue[0] = self.queue_initial
@@ -217,3 +213,94 @@ class WirelessCommunicationsEnv:
         return np.concatenate(
             [self.g[:, t], self.occ[:, t], [self.queue[t], self.batt[t]]]
         )
+
+
+class BatteryChargingEnv(gym.Env):
+    """
+    SETUP DESCRIPTION
+    - Battery management setup for optimal charging control with a finite horizon of T time steps.
+    - Battery connected to various energy sources with varying costs and availability (e.g., solar, wind, grid power).
+    - Decision-making at each time step involves selecting the charging power level, considering both immediate energy needs and long-term battery durability.
+    - Durability term in the reward function penalizes charging behaviors that reduce battery lifespan, balancing immediate rewards with battery health.
+
+    STATES
+    - Battery Energy Level b_t: Amount of energy currently stored in the battery (real and positive).
+    - Energy Source Cost c_t: Cost associated with charging from each available energy source (real and positive, potentially varying by source and time).
+    - Battery Health h_t: Indicator of battery degradation level or capacity fade, representing battery wear due to previous charging decisions (real and positive).
+    - Energy Demand d_t: Amount of energy required at the current time step (real and positive, representing power load or demand fluctuations).
+
+    ACTIONS
+    - Charging Power p_t: The power level selected to charge the battery at each time step (real and non-negative).
+    - Energy Source Selection s_t: The energy source chosen for charging (e.g., solar, wind, grid); each source has different costs and potentially different impacts on battery health.
+    """
+    def __init__(self, H=5):
+        super(BatteryChargingEnv, self).__init__()
+
+        self.H = H
+        self.current_step = 0
+
+        # State space: [SoC, Solar Availability, Wind Availability, Grid Price]
+        self.observation_space = spaces.Box(
+            low=np.array([0.0, 0.0, 0.0, 0.0]),  # SoC, Solar, Wind, Grid Price min values
+            high=np.array([1.0, 1.0, 1.0, 1.0]),  # SoC, Solar, Wind, Grid Price max values
+            dtype=np.float64
+        )
+
+        # Action space: charging rates for [Solar, Wind, Grid]
+        self.action_space = spaces.Box(
+            low=0.0,
+            high=1.0,  # Assuming max charging rate of 1 for each source
+            shape=(3,),
+            dtype=np.float64
+        )
+
+        self.soc_target = 1.0  # Target SoC is 100%
+        self.lambda_penalty = 5.0  # Penalty weight for not reaching the target SoC by end
+        self.lambda_durability = 20.0
+
+    def reset(self):
+        self.soc = 0.0  # Initial state of charge (SoC), can vary as desired
+        self.solar_availability = np.random.uniform(0.3, 0.7)  # Random initial solar availability
+        self.wind_availability = np.random.uniform(0.3, 0.7)   # Random initial wind availability
+        self.grid_price = np.random.uniform(0.1, 0.3)          # Random initial grid price
+
+        self.current_step = 0
+
+        return self._get_obs(), None
+
+    def _get_obs(self):
+        return np.array(
+            [
+                self.soc,
+                self.solar_availability,
+                self.wind_availability,
+                self.grid_price
+            ], dtype=np.float64)
+
+    def step(self, action):
+        solar_rate, wind_rate, grid_rate = action
+
+        solar_efficiency = 0.9 if self.solar_availability > 0.5 else 0.2
+        wind_efficiency = 0.8 if self.wind_availability > 0.5 else 0.2
+
+        soc_increase = (
+            solar_efficiency * solar_rate * self.solar_availability +
+            wind_efficiency * wind_rate * self.wind_availability +
+            grid_rate
+        )
+
+        self.soc = min(1.0, self.soc + soc_increase)
+
+        degradation_cost = self.lambda_durability * (self.soc ** 2) * (soc_increase ** 2)
+        charging_cost = grid_rate * self.grid_price
+        unmet_target_penalty = self.lambda_penalty * max(0, self.soc_target - self.soc)
+        reward = - (charging_cost + unmet_target_penalty + degradation_cost)
+
+        self.solar_availability = np.clip(self.solar_availability + np.random.normal(0, 0.1), 0.0, 1.0)
+        self.wind_availability = np.clip(self.wind_availability + np.random.normal(0, 0.1), 0.0, 1.0)
+        self.grid_price = np.clip(self.grid_price + np.random.normal(0, 0.05), 0.1, 0.5)
+
+        self.current_step += 1
+        done = self.current_step >= self.H
+
+        return self._get_obs(), reward, done, None, None

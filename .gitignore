@@ -9,6 +9,8 @@ explain.txt
 __pycache__/
 *.py[cod]
 *$py.class
+results/
+legacy/
 
 # C extensions
 *.so

@@ -41,11 +41,9 @@ def run_experiment(
     torch.manual_seed(n)
 
     Gs = []
-    for _ in range(E):
+    for e in range(E):
         eps = run_train_episode(env, agent, eps, eps_decay, H)
-        G = run_test_episode(env, agent, H)
-        Gs.append(G)
-
-        if hasattr(agent, "scheduler"):
-            agent.scheduler.step()
+        if e % 10 == 0:
+            G = run_test_episode(env, agent, H)
+            Gs.append(G)
     return Gs
