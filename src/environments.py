@@ -304,3 +304,98 @@ class BatteryChargingEnv(gym.Env):
         done = self.current_step >= self.H
 
         return self._get_obs(), reward, done, None, None
+
+class SourceChannelCodingEnv(gym.Env):
+    """
+    Finite Horizon Source-Channel Coding Environment with Costs, Transmission Errors, and Dynamic Compression
+
+    - T time steps
+    - K parallel channels with stochastic noise (channel gains evolve over time)
+    - At each step, choose compression and coding allocation
+    - Compression shrinks remaining data dynamically
+    """
+
+    def __init__(self, T=10, K=3, data_initial=100.0, rho=0.9, sigma=0.2, beta_success=2.0):
+        super(SourceChannelCodingEnv, self).__init__()
+
+        self.T = T
+        self.K = K
+        self.data_initial = data_initial  # Initial amount of source bits to send
+        self.rho = rho  # Autocorrelation coefficient for channel evolution
+        self.sigma = sigma  # Noise strength for channel gain evolution
+        self.beta_success = beta_success  # Sensitivity of success probability to channel gain
+
+        self.current_step = 0
+
+        # State: [Remaining data] + [Channel gains]
+        low_state = np.array([0.0] + [0.0] * K)
+        high_state = np.array([np.inf] + [np.inf] * K)
+        self.observation_space = spaces.Box(low=low_state, high=high_state, dtype=np.float32)
+
+        # Action: [Compression level (0-1)] + [Power allocation per channel (0-1)]
+        low_action = np.array([0.0] + [0.0] * K)
+        high_action = np.array([1.0] + [1.0] * K)
+        self.action_space = spaces.Box(low=low_action, high=high_action, dtype=np.float32)
+
+        # Compression-distortion model parameters
+        self.alpha_distortion = 10.0  # Controls distortion curve
+
+        # Final penalty weight
+        self.final_penalty_weight = 50.0
+
+        # Cost per bit transmitted per channel (randomized at init)
+        self.channel_costs = np.random.uniform(0.5, 1.5, size=self.K)
+
+    def reset(self):
+        self.current_step = 0
+        self.remaining_data = self.data_initial
+        self.gains = np.abs(np.random.normal(1.0, 0.5, size=self.K))  # Initial random channel gains
+
+        return self._get_obs(), None
+
+    def _get_obs(self):
+        return np.concatenate([[self.remaining_data], self.gains])
+
+    def step(self, action):
+        compression_level = np.clip(action[0], 0.0, 1.0)
+        allocations = np.clip(action[1:], 0.0, 1.0)
+        allocations /= np.sum(allocations) + 1e-8  # Normalize allocations to sum to 1
+
+        # Apply compression dynamically to the remaining data
+        self.remaining_data *= (1.0 - compression_level)
+
+        # Channel capacities: simple model log(1 + SNR)
+        capacities = np.log2(1 + self.gains)
+
+        # Transmission success probabilities
+        success_probs = 1 - np.exp(-self.beta_success * self.gains)
+        success_mask = np.random.rand(self.K) < success_probs
+
+        # Bits transmitted considering success/failure
+        bits_transmitted = np.sum(allocations * capacities * success_mask)
+
+        # Update remaining data after transmission
+        self.remaining_data = max(0.0, self.remaining_data - bits_transmitted)
+
+        # Transmission cost
+        transmission_cost = np.sum(allocations * capacities * self.channel_costs)
+
+        # Compute distortion: quadratic in compression level
+        distortion = self.alpha_distortion * (compression_level ** 2)
+
+        # Reward: negative distortion, negative transmission cost
+        reward = - distortion - transmission_cost
+
+        done = False
+        self.current_step += 1
+
+        # Update channel gains (Gauss-Markov process)
+        noise = np.random.normal(0.0, self.sigma, size=self.K)
+        self.gains = self.rho * self.gains + np.sqrt(1 - self.rho ** 2) * noise
+        self.gains = np.clip(self.gains, 0.0, np.inf)
+
+        if self.current_step >= self.T:
+            done = True
+            reward -= self.final_penalty_weight * self.remaining_data / self.data_initial
+
+        return self._get_obs(), reward, done, None, None
