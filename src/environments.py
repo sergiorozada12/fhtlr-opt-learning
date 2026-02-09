@@ -343,6 +343,9 @@ class SourceChannelCodingEnv(gym.Env):
         # Final penalty weight
         self.final_penalty_weight = 50.0
 
+        # controls the effectiveness of compression
+        self.alpha_compression = 100
+
         # Cost per bit transmitted per channel (randomized at init)
         self.channel_costs = np.random.uniform(0.5, 1.5, size=self.K)
 
@@ -362,7 +365,7 @@ class SourceChannelCodingEnv(gym.Env):
         allocations /= np.sum(allocations) + 1e-8  # Normalize allocations to sum to 1
 
         # Apply compression dynamically to the remaining data
-        self.remaining_data *= (1.0 - compression_level)
+        self.remaining_data *= (1.0 / (1.0 + self.alpha_compression * compression_level))
 
         # Channel capacities: simple model log(1 + SNR)
         capacities = np.log2(1 + self.gains)
