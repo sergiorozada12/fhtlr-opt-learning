@@ -3,7 +3,10 @@ from typing import List, Tuple
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-# import matrix_mdp
+try:
+    import matrix_mdp
+except ImportError:
+    matrix_mdp = None
 
 
 class GridWorldEnv:
@@ -14,6 +17,8 @@ class GridWorldEnv:
         W: int = 5,
         H: int = 5,
     ) -> None:
+        if matrix_mdp is None:
+            raise ImportError("matrix_mdp module is not installed. Please install it to use GridWorldEnv.")
         self.nS = nS
         self.nA = nA
         self.W = W
