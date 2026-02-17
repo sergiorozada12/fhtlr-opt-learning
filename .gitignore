@@ -3,6 +3,7 @@
 *.npy
 exp.py
 exp1.py
+exp2.py
 pid.txt
 explain.txt
 # Byte-compiled / optimized / DLL files

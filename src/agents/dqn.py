@@ -10,14 +10,14 @@ from src.utils import ReplayBuffer, Discretizer
 
 class Dqn:
     def __init__(
-        self, discretizer: Discretizer, alpha: float, gamma: float, buffer_size: int
+        self, discretizer: Discretizer, alpha: float, gamma: float, buffer_size: int, hidden_layers = [32],
     ) -> None:
         self.gamma = gamma
 
         self.buffer = ReplayBuffer(buffer_size)
         self.discretizer = discretizer
         self.Q = ValueNetwork(
-            len(discretizer.bucket_states), [32], np.prod(discretizer.bucket_actions)
+            len(discretizer.bucket_states), hidden_layers, np.prod(discretizer.bucket_actions)
         ).double()
         self.opt = Adamax(self.Q.parameters(), lr=alpha)
 
@@ -52,7 +52,7 @@ class Dqn:
 
 class DFHqn:
     def __init__(
-        self, discretizer: Discretizer, alpha: float, H: int, buffer_size: int
+        self, discretizer: Discretizer, alpha: float, H: int, buffer_size: int, hidden_layers = [32],
     ) -> None:
         self.alpha = alpha
         self.H = H
@@ -60,7 +60,7 @@ class DFHqn:
         self.buffer = ReplayBuffer(buffer_size)
         self.discretizer = discretizer
         self.Q = FHValueNetwork(
-            len(discretizer.bucket_states), [32], np.prod(discretizer.bucket_actions), H
+            len(discretizer.bucket_states), hidden_layers, np.prod(discretizer.bucket_actions), H
         ).double()
         self.opt = Adamax(self.Q.parameters(), lr=alpha)
 

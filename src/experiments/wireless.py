@@ -83,9 +83,9 @@ def run_experiment_with_agent(agent_name, n_exp):
     np.random.seed(n_exp)
     torch.manual_seed(n_exp)
     if agent_name == 'dqn':
-        agent = Dqn(DISCRETIZER, ALPHA_DQN, GAMMA, BUFFER_SIZE)
+        agent = Dqn(DISCRETIZER, ALPHA_DQN, GAMMA, BUFFER_SIZE, hidden_layers=[32])
     if agent_name == 'dfhqn':
-        agent = DFHqn(DISCRETIZER, ALPHA_DQN, H, BUFFER_SIZE)
+        agent = DFHqn(DISCRETIZER, ALPHA_DQN, H, BUFFER_SIZE, hidden_layers=[32])
     if agent_name == "fhtlr_max":
         agent = FHMaxTlr(DISCRETIZER, ALPHA_FHTLR_MAX, H, K, SCALE, w_decay=W_DECAY, buffer_size=1)
     if agent_name == "fhtlr_true":

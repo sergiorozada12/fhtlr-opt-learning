@@ -46,4 +46,6 @@ def run_experiment(
         if e % 10 == 0:
             G = run_test_episode(env, agent, H)
             Gs.append(G)
+        print(f'\r Episodio: {e}/{E}', end='')
+
     return Gs
