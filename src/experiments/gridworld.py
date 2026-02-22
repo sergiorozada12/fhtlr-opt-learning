@@ -10,17 +10,21 @@ from src.agents.bcd_grid import bcd, bcgd
 from src.models import PARAFAC
 
 Tamaño = 5
+ENV = None
+discretizer = None
 
-ENV = GridWorldEnv(nS =Tamaño*Tamaño,W = Tamaño, H = Tamaño, nA=5)
-
-discretizer = Discretizer(
-    min_points_states=[0, 0],
-    max_points_states=[4, 4],
-    bucket_states=[Tamaño,Tamaño],
-    min_points_actions=[0],
-    max_points_actions=[4],
-    bucket_actions=[5],
-)
+def init_env():
+    global ENV, discretizer
+    ENV = GridWorldEnv(nS =Tamaño*Tamaño,W = Tamaño, H = Tamaño, nA=5)
+    
+    discretizer = Discretizer(
+        min_points_states=[0, 0],
+        max_points_states=[4, 4],
+        bucket_states=[Tamaño,Tamaño],
+        min_points_actions=[0],
+        max_points_actions=[4],
+        bucket_actions=[5],
+    )
 
 #Hyperparameters
 
@@ -163,7 +167,7 @@ def BCGD_PI_exp(Q_opt, Pi):
         pickle.dump(data, f)  # serialize using dump()
 
 def run_gridworld_simulations():
-
+    init_env()
     # RANK ANALISYS FOR Q*
     bp_learner = BackwardPropagation(ENV.H,ENV.nS,ENV.nA,ENV.R,ENV.P)
     _ = bp_learner.run()

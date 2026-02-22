@@ -407,3 +407,425 @@ class SourceChannelCodingEnv(gym.Env):
             reward -= self.final_penalty_weight * self.remaining_data / self.data_initial
 
         return self._get_obs(), reward, done, None, None
+
+
+class PendulumTerminalReward(gym.Env):
+    """
+    Pendulum environment where reward is 0 everywhere except at the final step T.
+    The agent starts upright but with a high velocity, forcing it to brake immediately.
+    """
+    def __init__(self, T=10, max_torque=2.0, low_thdot=2.0, high_thdot=4.0):
+        super(PendulumTerminalReward, self).__init__()
+        self.T = T
+        self.max_torque = max_torque
+        self.low_thdot = low_thdot
+        self.high_thdot = high_thdot
+        
+        self.max_speed = 8.0
+        self.dt = 0.05
+        self.g = 10.0
+        self.m = 1.0
+        self.l = 1.0
+        
+        high = np.array([1.0, 1.0, self.max_speed], dtype=np.float32)
+        self.action_space = spaces.Box(
+            low=-self.max_torque,
+            high=self.max_torque,
+            shape=(1,),
+            dtype=np.float32
+        )
+        self.observation_space = spaces.Box(
+            low=-high,
+            high=high,
+            dtype=np.float32
+        )
+        
+        self.current_step = 0
+        self.state = None
+
+    def step(self, u):
+        th, thdot = self.state  # th := theta
+
+        g = self.g
+        m = self.m
+        l = self.l
+        dt = self.dt
+
+        u = np.clip(u, -self.max_torque, self.max_torque)[0]
+        self.last_u = u  # for rendering
+
+        reward = 0.0 # Default reward
+
+        newthdot = thdot + (3 * g / (2 * l) * np.sin(th) + 3.0 / (m * l ** 2) * u) * dt
+        newthdot = np.clip(newthdot, -self.max_speed, self.max_speed)
+        newth = th + newthdot * dt
+
+        self.state = np.array([newth, newthdot])
+        
+        self.current_step += 1
+        terminated = False
+        truncated = False
+        
+        if self.current_step >= self.T:
+            terminated = True
+            # Terminal reward
+            reward = -(angle_normalize(th) ** 2 + 0.1 * thdot ** 2 + 0.001 * (u ** 2))
+            
+        return self._get_obs(), reward, terminated, truncated, {}
+
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+        if seed is not None:
+            np.random.seed(seed)
+        
+        # Start upright (theta approx 0) but with high velocity
+        high_theta = 0.05
+        init_theta = np.random.uniform(low=-high_theta, high=high_theta)
+        
+        init_thdot = np.random.uniform(low=self.low_thdot, high=self.high_thdot)
+        if np.random.rand() < 0.5:
+            init_thdot = -init_thdot
+            
+        self.state = np.array([init_theta, init_thdot])
+        self.last_u = None
+        self.current_step = 0
+        return self._get_obs(), {}
+
+    def _get_obs(self):
+        th, thdot = self.state
+        return np.array([np.cos(th), np.sin(th), thdot], dtype=np.float64)
+
+    def render(self):
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+        
+        # Create figure and axis
+        fig, ax = plt.subplots(figsize=(4, 4), dpi=100)
+        canvas = FigureCanvas(fig)
+        
+        # Pendulum parameters
+        l = self.l
+        
+        x = l * np.sin(self.state[0])
+        y = l * np.cos(self.state[0])
+        
+        # Draw track (reference circle)
+        track = plt.Circle((0, 0), l, color='k', fill=False, linestyle='--', linewidth=1, alpha=0.2)
+        ax.add_artist(track)
+
+        # Draw pivot
+        ax.plot([0], [0], 'ko', markersize=8)
+        # Draw rod
+        ax.plot([0, x], [0, y], 'b-', linewidth=6)
+        # Draw bob
+        ax.plot([x], [y], 'ro', markersize=16)
+        
+        ax.set_xlim([-l*1.3, l*1.3])
+        ax.set_ylim([-l*1.3, l*1.3])
+        ax.set_aspect('equal')
+        ax.axis('off')
+        
+        # Render to numpy array
+        canvas.draw()
+        try:
+            image = np.frombuffer(canvas.tostring_rgb(), dtype='uint8')
+        except AttributeError:
+            image = np.frombuffer(canvas.buffer_rgba(), dtype='uint8')
+        
+        w, h = fig.canvas.get_width_height()
+        image = image.reshape((h, w, -1))
+        if image.shape[2] == 4:
+            image = image[:, :, :3]
+            
+        plt.close(fig)
+        return image
+
+
+def angle_normalize(x):
+    return ((x + np.pi) % (2 * np.pi)) - np.pi
+
+
+class CartPoleTerminalReward(gym.Env):
+    """
+    CartPole environment with terminal reward.
+    Goal: Force the agent to balance the pole at the final step T.
+    """
+    def __init__(self, T=10, max_force=10.0, low_thdot=0.0, high_thdot=0.5):
+        super(CartPoleTerminalReward, self).__init__()
+        self.T = T
+        self.max_force = max_force
+        self.low_thdot = low_thdot
+        self.high_thdot = high_thdot
+        
+        self.gravity = 9.8
+        self.masscart = 1.0
+        self.masspole = 0.1
+        self.total_mass = (self.masspole + self.masscart)
+        self.length = 0.5 # actually half the pole's length
+        self.polemass_length = (self.masspole * self.length)
+        self.tau = 0.02  # seconds between state updates
+        
+        # Angle at which to fail the episode
+        self.theta_threshold_radians = 12 * 2 * np.pi / 360
+        self.x_threshold = 2.4
+        
+        # Angle limit set to 2 * theta_threshold_radians so failing observation is still within bounds
+        high = np.array([
+            self.x_threshold * 2,
+            np.finfo(np.float64).max,
+            self.theta_threshold_radians * 2,
+            np.finfo(np.float64).max],
+            dtype=np.float64)
+            
+        self.action_space = spaces.Box(
+            low=-self.max_force,
+            high=self.max_force,
+            shape=(1,),
+            dtype=np.float64
+        )
+        self.observation_space = spaces.Box(-high, high, dtype=np.float64)
+
+        self.current_step = 0
+        self.state = None
+
+    def step(self, action):
+        state = self.state
+        x, x_dot, theta, theta_dot = state
+        force = np.clip(action, -self.max_force, self.max_force)[0]
+        costheta = np.cos(theta)
+        sintheta = np.sin(theta)
+        
+        temp = (force + self.polemass_length * theta_dot * theta_dot * sintheta) / self.total_mass
+        thetaacc = (self.gravity * sintheta - costheta * temp) / (self.length * (4.0/3.0 - self.masspole * costheta * costheta / self.total_mass))
+        xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
+        
+        x  = x + self.tau * x_dot
+        x_dot = x_dot + self.tau * xacc
+        theta = theta + self.tau * theta_dot
+        theta_dot = theta_dot + self.tau * thetaacc
+        
+        self.state = (x, x_dot, theta, theta_dot)
+        
+        self.current_step += 1
+        terminated = False
+        truncated = False
+        reward = 0.0
+        
+        if self.current_step >= self.T:
+            terminated = True
+            # Terminal reward: 1 if upright, 0 otherwise (or continuous)
+            # Let's make it continuous: -(theta^2 + 0.1*theta_dot^2)
+            # Maybe restrict x? -x^2? 
+            # Primary goal: balance.
+            reward = -(theta**2 + 0.1*theta_dot**2)
+            
+            # Penalize if out of bounds (though usually episode ends)
+            if x < -self.x_threshold or x > self.x_threshold:
+               reward -= 10.0
+            if theta < -self.theta_threshold_radians or theta > self.theta_threshold_radians:
+               reward -= 10.0
+
+        return np.array(self.state, dtype=np.float64), reward, terminated, truncated, {}
+
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+        if seed is not None:
+            np.random.seed(seed)
+            
+        # Start somewhat unstable
+        self.state = np.random.uniform(low=-0.05, high=0.05, size=(4,))
+        
+        # Initialize angular velocity based on parameters
+        init_thdot = np.random.uniform(low=self.low_thdot, high=self.high_thdot)
+        if np.random.rand() < 0.5:
+            init_thdot = -init_thdot
+        self.state[3] = init_thdot
+        
+        self.current_step = 0
+        return np.array(self.state, dtype=np.float64), {}
+
+    def render(self):
+        import matplotlib.pyplot as plt
+        from matplotlib.patches import Rectangle
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
+        # Create figure and axis
+        fig, ax = plt.subplots(figsize=(6, 4), dpi=100)
+        canvas = FigureCanvas(fig)
+
+        # State
+        x, _, theta, _ = self.state
+        
+        # Parameters for rendering
+        screen_width = 6.0
+        world_width = self.x_threshold * 2
+        scale = screen_width / world_width
+        carty = 0.0 # Cart vertical position
+        cartwidth = 1.0
+        cartheight = 0.6
+        polewidth = 0.2
+        polelen = self.length * 2 # Visual length
+        
+        # Draw track
+        ax.plot([-self.x_threshold, self.x_threshold], [carty, carty], 'k-', linewidth=1)
+        
+        # Draw cart
+        cart_rect = Rectangle((x - cartwidth / 2.0, carty - cartheight / 2.0), cartwidth, cartheight, color='black')
+        ax.add_patch(cart_rect)
+        
+        # Draw pole
+        # Pole start (center of cart)
+        pole_start_x = x
+        pole_start_y = carty
+        # Pole end
+        pole_end_x = x + polelen * np.sin(theta)
+        pole_end_y = carty + polelen * np.cos(theta)
+        
+        ax.plot([pole_start_x, pole_end_x], [pole_start_y, pole_end_y], 'r-', linewidth=6)
+        
+        # Settings
+        ax.set_xlim([-self.x_threshold * 2, self.x_threshold * 2])
+        ax.set_ylim([-1, 2])
+        ax.set_aspect('equal')
+        ax.axis('off')
+
+        # Render to numpy array
+        canvas.draw()
+        try:
+            image = np.frombuffer(canvas.tostring_rgb(), dtype='uint8')
+        except AttributeError:
+             image = np.frombuffer(canvas.buffer_rgba(), dtype='uint8')
+        
+        w, h = fig.canvas.get_width_height()
+        image = image.reshape((h, w, -1))
+        # Drop alpha channel if present
+        if image.shape[2] == 4:
+            image = image[:, :, :3]
+            
+        plt.close(fig)
+        return image
+
+
+class MountainCarFiniteHorizon(gym.Env):
+    def __init__(self, T=200, reward_fn=None):
+        
+        self.min_position = -1.2
+        self.max_position = 0.6
+        self.max_speed = 0.07
+        self.goal_position = 0.45
+        self.goal_velocity = 0
+        
+        self.force = 0.0015
+        self.gravity = 0.0025
+        
+        self.low = np.array([self.min_position, -self.max_speed], dtype=np.float32)
+        self.high = np.array([self.max_position, self.max_speed], dtype=np.float32)
+        
+        self.action_space = spaces.Box(
+            low=-1.0,
+            high=1.0,
+            shape=(1,),
+            dtype=np.float32
+        )
+        self.observation_space = spaces.Box(
+            low=self.low,
+            high=self.high,
+            dtype=np.float32
+        )
+        
+        self.reward_fn = reward_fn if reward_fn is not None else self._default_reward_fn
+        self.current_step = 0
+        self.state = None
+
+    def _default_reward_fn(self, position, velocity, action):
+        # Default continuous mountain car reward
+        reward = 0
+        if position >= self.goal_position:
+            reward += 100.0
+        reward -= np.power(action[0], 2) * 0.1
+        return reward
+
+    def step(self, action):
+        position, velocity = self.state
+        
+        force = np.clip(action, -1.0, 1.0)[0]
+        
+        velocity += force * self.force + np.cos(3 * position) * (-self.gravity)
+        velocity = np.clip(velocity, -self.max_speed, self.max_speed)
+        
+        position += velocity
+        position = np.clip(position, self.min_position, self.max_position)
+        
+        if position == self.min_position and velocity < 0:
+            velocity = 0
+            
+        self.state = np.array([position, velocity], dtype=np.float64)
+        
+        reward = self.reward_fn(position, velocity, np.array([force]))
+        
+        self.current_step += 1
+        terminated = False
+        truncated = False
+        
+        if position >= self.goal_position: # Goal reached
+            terminated = True
+            
+        if self.current_step >= self.T:
+            terminated = True
+            truncated = False # Handled as termination for the agent
+            
+        return self._get_obs(), reward, terminated, truncated, {}
+
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+        if seed is not None:
+            np.random.seed(seed)
+            
+        self.state = np.array([np.random.uniform(low=-0.6, high=-0.4), 0], dtype=np.float64)
+        self.current_step = 0
+        return self._get_obs(), {}
+
+    def _get_obs(self):
+        return np.array(self.state, dtype=np.float64)
+
+    def render(self):
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+        
+        # Create figure and axis
+        fig, ax = plt.subplots(figsize=(6, 4), dpi=100)
+        canvas = FigureCanvas(fig)
+        
+        # Mountain car landscape
+        xs = np.linspace(self.min_position, self.max_position, 100)
+        ys = np.sin(3 * xs) * 0.45 + 0.55
+        
+        ax.plot(xs, ys, 'k-', linewidth=1)
+        
+        # Car position
+        pos = self.state[0]
+        y_car = np.sin(3 * pos) * 0.45 + 0.55
+        
+        ax.plot([pos], [y_car], 'go', markersize=10) # Car
+        ax.plot([self.goal_position], [np.sin(3*self.goal_position)*0.45+0.55], 'ys', markersize=8) # Goal
+        
+        ax.set_xlim([self.min_position, self.max_position])
+        ax.set_ylim([-0.1, 1.1])
+        ax.axis('off')
+        
+        # Render to numpy array
+        # Render to numpy array
+        canvas.draw()
+        try:
+            image = np.frombuffer(canvas.tostring_rgb(), dtype='uint8')
+        except AttributeError:
+             image = np.frombuffer(canvas.buffer_rgba(), dtype='uint8')
+        
+        # Reshape and handle potentially different channel counts (RGB vs RGBA)
+        w, h = fig.canvas.get_width_height()
+        image = image.reshape((h, w, -1))
+        if image.shape[2] == 4:
+            image = image[:, :, :3]
+            
+        plt.close(fig)
+        return image

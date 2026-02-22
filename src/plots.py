@@ -128,42 +128,235 @@ def plot_gridworld_Q(W, mat_q_stationary, mat_q, mat_tlr):
 
 
 def plot_wireless():
-    dqn = np.load("results/dqn2.npy")
-    dfhqn = np.load("results/dfhqn2.npy")
-    fhtlr_max = np.load("results/fhtlr2_max.npy")
-    fhtlr_true = np.load("results/fhtlr2_true.npy")
+    try:
+        dqn3 = np.load("results/wireless_dqn.npy")
+        dfhqn = np.load("results/wireless_dfhqn.npy")
+        fhtlr_max = np.load("results/wireless_fhtlr_max.npy")
+        fhtlr_true = np.load("results/wireless_fhtlr_true.npy")
+        fhtlr_max_er = np.load("results/wireless_fhtlr_max_er.npy")
+        fhtlr_true_er = np.load("results/wireless_fhtlr_true_er.npy")
+        # fhql = np.load("results/wireless_fhql.npy")
+        fhrbf = np.load("results/wireless_fhrbf.npy")
+    except FileNotFoundError as e:
+        print(f"Error loading files: {e}")
+        return
 
-    mu_dqn = np.mean(dqn, axis=0)
-    mu_dfhqn = np.mean(dfhqn, axis=0)
-    mu_fhtlr_max = np.mean(fhtlr_max, axis=0)
-    mu_fhtlr_true = np.mean(fhtlr_true, axis=0)
+    # Compute median
+    mu_dqn3 = np.median(dqn3, axis=0)
+    mu_dfhqn = np.median(dfhqn, axis=0)
+    mu_fhtlr_max = np.median(fhtlr_max, axis=0)
+    mu_fhtlr_true = np.median(fhtlr_true, axis=0)
+    mu_fhtlr_max_er = np.median(fhtlr_max_er, axis=0)
+    mu_fhtlr_true_er = np.median(fhtlr_true_er, axis=0)
+    #mu_fhql = np.median(fhql, axis=0)
+    mu_fhrbf = np.median(fhrbf, axis=0)
 
-    w = 100
+    p25 = 40
+    p75 = 60
 
-    mu_dqn_smt = [np.mean(mu_dqn[i - w : i]) for i in range(w, len(mu_dqn))]
-    mu_dfhqn_smt = [np.mean(mu_dfhqn[i - w : i]) for i in range(w, len(mu_dfhqn))]
-    mu_fhtlr_max_smt = [np.mean(mu_fhtlr_max[i - w : i]) for i in range(w, len(mu_fhtlr_max))]
-    mu_fhtlr_true_smt = [np.mean(mu_fhtlr_true[i - w : i]) for i in range(w, len(mu_fhtlr_true))]
+    # Compute P25 and P75
+    p25_dqn3, p75_dqn3 = np.percentile(dqn3, [p25, p75], axis=0)
+    p25_dfhqn, p75_dfhqn = np.percentile(dfhqn, [p25, p75], axis=0)
+    p25_fhtlr_max, p75_fhtlr_max = np.percentile(fhtlr_max, [p25, p75], axis=0)
+    p25_fhtlr_true, p75_fhtlr_true = np.percentile(fhtlr_true, [p25, p75], axis=0)
+    p25_fhtlr_max_er, p75_fhtlr_max_er = np.percentile(fhtlr_max_er, [p25, p75], axis=0)
+    p25_fhtlr_true_er, p75_fhtlr_true_er = np.percentile(fhtlr_true_er, [p25, p75], axis=0)
+    #p25_fhql, p75_fhql = np.percentile(fhql, [p25, p75], axis=0)
+    p25_fhrbf, p75_fhrbf = np.percentile(fhrbf, [p25, p75], axis=0)
 
-    with plt.style.context(["science"], ["ieee"]):
+    # Apply moving average for smoothing
+    def smooth(series, window=100):
+        return np.convolve(series, np.ones(window)/window, mode='valid')
+
+    # Smooth the median and IQR bounds
+    smoothed_mu_dqn3 = smooth(mu_dqn3)
+    smoothed_p25_dqn3 = smooth(p25_dqn3)
+    smoothed_p75_dqn3 = smooth(p75_dqn3)
+
+    smoothed_mu_dfhqn = smooth(mu_dfhqn)
+    smoothed_p25_dfhqn = smooth(p25_dfhqn)
+    smoothed_p75_dfhqn = smooth(p75_dfhqn)
+
+    smoothed_mu_fhtlr_max = smooth(mu_fhtlr_max)
+    smoothed_p25_fhtlr_max = smooth(p25_fhtlr_max)
+    smoothed_p75_fhtlr_max = smooth(p75_fhtlr_max)
+
+    smoothed_mu_fhtlr_true = smooth(mu_fhtlr_true)
+    smoothed_p25_fhtlr_true = smooth(p25_fhtlr_true)
+    smoothed_p75_fhtlr_true = smooth(p75_fhtlr_true)
+
+    smoothed_mu_fhtlr_max_er = smooth(mu_fhtlr_max_er)
+    smoothed_p25_fhtlr_max_er = smooth(p25_fhtlr_max_er)
+    smoothed_p75_fhtlr_max_er = smooth(p75_fhtlr_max_er)
+
+    smoothed_mu_fhtlr_true_er = smooth(mu_fhtlr_true_er)
+    smoothed_p25_fhtlr_true_er = smooth(p25_fhtlr_true_er)
+    smoothed_p75_fhtlr_true_er = smooth(p75_fhtlr_true_er)
+    """
+    smoothed_mu_fhql = smooth(mu_fhql)
+    smoothed_p25_fhql = smooth(p25_fhql)
+    smoothed_p75_fhql = smooth(p75_fhql)
+    """
+    smoothed_mu_fhrbf = smooth(mu_fhrbf)
+    smoothed_p25_fhrbf = smooth(p25_fhrbf)
+    smoothed_p75_fhrbf = smooth(p75_fhrbf)
+
+    # Adjust X-axis length for smoothed series
+    x_smoothed = np.arange(0, len(smoothed_mu_fhtlr_max) * 10, 10)
+    num_params = ["3,492", "13,392", "2,040", "2,040", "2,040", "2,040", "4000M", "20,000"]
+
+    import matplotlib.ticker as ticker
+    # Set up plot style
+    with plt.style.context(["science", "ieee"]):
+        matplotlib.rcParams.update({"font.size": 16})
+        fig, ax = plt.subplots(figsize=[5, 3])
+        
+        # List of models for plotting
+        models = [
+            ("DQN", smoothed_mu_dqn3, smoothed_p25_dqn3, smoothed_p75_dqn3, "k", num_params[0]),
+            ("DFHQN", smoothed_mu_dfhqn, smoothed_p25_dfhqn, smoothed_p75_dfhqn, "b", num_params[1]),
+            ("BCTD-PI", smoothed_mu_fhtlr_max, smoothed_p25_fhtlr_max, smoothed_p75_fhtlr_max, "r", num_params[2]),
+            ("S-BCGD-PI", smoothed_mu_fhtlr_true, smoothed_p25_fhtlr_true, smoothed_p75_fhtlr_true, "orange", num_params[3]),
+            ("BCTD-PI (ER)", smoothed_mu_fhtlr_max_er, smoothed_p25_fhtlr_max_er, smoothed_p75_fhtlr_max_er, "g", num_params[4]),
+            ("S-BCGD-PI (ER)", smoothed_mu_fhtlr_true_er, smoothed_p25_fhtlr_true_er, smoothed_p75_fhtlr_true_er, "y", num_params[5]),
+            ("LFHQL", smoothed_mu_fhrbf, smoothed_p25_fhrbf, smoothed_p75_fhrbf, "purple", num_params[7]),
+        ]
+        
+        for label, smoothed_median, smoothed_p25, smoothed_p75, color, params in models:
+            ax.plot(x_smoothed[::100], smoothed_median[::100], c=color, label=f"{label} - {params} params.", linewidth=1)
+            ax.fill_between(x_smoothed, smoothed_p25, smoothed_p75, color=color, alpha=0.05)
+        
+        ax.set_xlim(0, 140000)
+        ax.set_ylim(4.5, 5.8)
+        ax.grid()
+        ax.set_xlabel("(a) Episodes")
+        ax.set_ylabel("Return")
+        ax.set_xticks([0, 40_000, 80_000, 120_000])
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        
+        output_file = "figures/wireless.jpg"
+        plt.savefig(output_file, dpi=300)
+        print(f"Figure saved to {output_file}")
+
+
+def plot_battery():
+    try:
+        dqn3 = np.load("results/battery_dqn.npy")
+        dfhqn = np.load("results/battery_dfhqn.npy")
+        fhtlr_max = np.load("results/battery_fhtlr_max.npy")
+        fhtlr_true = np.load("results/battery_fhtlr_true.npy")
+        fhtlr_max_er = np.load("results/battery_fhtlr_max_er.npy")
+        fhtlr_true_er = np.load("results/battery_fhtlr_true_er.npy")
+        fhql = np.load("results/battery_fhql.npy")
+        fhrbf = np.load("results/battery_fhrbf.npy")
+    except FileNotFoundError as e:
+        print(f"Error loading files: {e}")
+        return
+
+    # Compute median
+    mu_dqn3 = np.median(dqn3, axis=0)
+    mu_dfhqn = np.median(dfhqn, axis=0)
+    mu_fhtlr_max = np.median(fhtlr_max, axis=0)
+    mu_fhtlr_true = np.median(fhtlr_true, axis=0)
+    mu_fhtlr_max_er = np.median(fhtlr_max_er, axis=0)
+    mu_fhtlr_true_er = np.median(fhtlr_true_er, axis=0)
+    mu_fhql = np.median(fhql, axis=0)
+    mu_fhrbf = np.median(fhrbf, axis=0)
+
+    p25 = 40
+    p75 = 60
+
+    # Compute P25 and P75
+    p25_dqn3, p75_dqn3 = np.percentile(dqn3, [p25, p75], axis=0)
+    p25_dfhqn, p75_dfhqn = np.percentile(dfhqn, [p25, p75], axis=0)
+    p25_fhtlr_max, p75_fhtlr_max = np.percentile(fhtlr_max, [p25, p75], axis=0)
+    p25_fhtlr_true, p75_fhtlr_true = np.percentile(fhtlr_true, [p25, p75], axis=0)
+    p25_fhtlr_max_er, p75_fhtlr_max_er = np.percentile(fhtlr_max_er, [p25, p75], axis=0)
+    p25_fhtlr_true_er, p75_fhtlr_true_er = np.percentile(fhtlr_true_er, [p25, p75], axis=0)
+    p25_fhql, p75_fhql = np.percentile(fhql, [p25, p75], axis=0)
+    p25_fhrbf, p75_fhrbf = np.percentile(fhrbf, [p25, p75], axis=0)
+
+    # Apply moving average for smoothing
+    def smooth(series, window=50):
+        return np.convolve(series, np.ones(window)/window, mode='valid')
+
+    # Smooth the median and IQR bounds
+    smoothed_mu_dqn3 = smooth(mu_dqn3)
+    smoothed_p25_dqn3 = smooth(p25_dqn3)
+    smoothed_p75_dqn3 = smooth(p75_dqn3)
+
+    smoothed_mu_dfhqn = smooth(mu_dfhqn)
+    smoothed_p25_dfhqn = smooth(p25_dfhqn)
+    smoothed_p75_dfhqn = smooth(p75_dfhqn)
+
+    smoothed_mu_fhtlr_max = smooth(mu_fhtlr_max)
+    smoothed_p25_fhtlr_max = smooth(p25_fhtlr_max)
+    smoothed_p75_fhtlr_max = smooth(p75_fhtlr_max)
+
+    smoothed_mu_fhtlr_true = smooth(mu_fhtlr_true)
+    smoothed_p25_fhtlr_true = smooth(p25_fhtlr_true)
+    smoothed_p75_fhtlr_true = smooth(p75_fhtlr_true)
+
+    smoothed_mu_fhtlr_max_er = smooth(mu_fhtlr_max_er)
+    smoothed_p25_fhtlr_max_er = smooth(p25_fhtlr_max_er)
+    smoothed_p75_fhtlr_max_er = smooth(p75_fhtlr_max_er)
+
+    smoothed_mu_fhtlr_true_er = smooth(mu_fhtlr_true_er)
+    smoothed_p25_fhtlr_true_er = smooth(p25_fhtlr_true_er)
+    smoothed_p75_fhtlr_true_er = smooth(p75_fhtlr_true_er)
+
+    smoothed_mu_fhql = smooth(mu_fhql)
+    smoothed_p25_fhql = smooth(p25_fhql)
+    smoothed_p75_fhql = smooth(p75_fhql)
+
+    smoothed_mu_fhrbf = smooth(mu_fhrbf)
+    smoothed_p25_fhrbf = smooth(p25_fhrbf)
+    smoothed_p75_fhrbf = smooth(p75_fhrbf)
+
+    # Adjust X-axis length for smoothed series
+    x_smoothed = np.arange(0, len(smoothed_mu_fhtlr_max) * 10, 10)
+
+    import matplotlib.ticker as ticker
+    # Set up plot style
+    with plt.style.context(["science", "ieee"]):
         matplotlib.rcParams.update({"font.size": 16})
 
-        fig = plt.figure(figsize=[8, 3])
-        plt.plot(mu_dqn_smt, c="b", label="DQN")
-        plt.plot(mu_dqn, alpha=0.2, c="b")
-        plt.plot(mu_dfhqn_smt, c="orange", label="DFHQN")
-        plt.plot(mu_dfhqn, alpha=0.2, c="orange")
-        plt.plot(mu_fhtlr_max_smt, c="g", label="FHTLR - MAX")
-        plt.plot(mu_fhtlr_max, alpha=0.2, c="g")
-        plt.plot(mu_fhtlr_true_smt, c="k", label="FHTLR - TRUE")
-        plt.plot(mu_fhtlr_true, alpha=0.2, c="k")
-        #plt.xlim(0, 100_000)
-        #plt.ylim(-3, 1.6)
-        plt.grid()
-        plt.legend()
-        plt.xlabel("Episodes")
-        plt.ylabel("Return")
-        fig.savefig("figures/fig_2.jpg", dpi=300)
+        fig, ax = plt.subplots(figsize=[5, 3])
+
+        # List of models for plotting
+        models = [
+            ("DQN", smoothed_mu_dqn3, smoothed_p25_dqn3, smoothed_p75_dqn3, "k", "33,160"),
+            ("DFHQN", smoothed_mu_dfhqn, smoothed_p25_dfhqn, smoothed_p75_dfhqn, "b", "165,160"),
+            ("BCTD-PI", smoothed_mu_fhtlr_max, smoothed_p25_fhtlr_max, smoothed_p75_fhtlr_max, "r", "3,750"),
+            ("S-BCGD-PI", smoothed_mu_fhtlr_true, smoothed_p25_fhtlr_true, smoothed_p75_fhtlr_true, "orange", "3,750"),
+            ("BCTD-PI (ER)", smoothed_mu_fhtlr_max_er, smoothed_p25_fhtlr_max_er, smoothed_p75_fhtlr_max_er, "g", "3,750"),
+            ("S-BCGD-PI (ER)", smoothed_mu_fhtlr_true_er, smoothed_p25_fhtlr_true_er, smoothed_p75_fhtlr_true_er, "y", "3,750"),
+            #("FHQL", smoothed_mu_fhql, smoothed_p25_fhql, smoothed_p75_fhql, "r", "50 M"),
+            ("LFHQL", smoothed_mu_fhrbf, smoothed_p25_fhrbf, smoothed_p75_fhrbf, "purple", "30,000"),
+        ]
+
+        # Plot each model's smoothed median and IQR
+        for label, smoothed_median, smoothed_p25, smoothed_p75, color, params in models:
+            ax.plot(x_smoothed, smoothed_median, c=color, label=f"{label} - {params} params.", linewidth=1)  # Smoothed Median
+            ax.fill_between(x_smoothed, smoothed_p25, smoothed_p75, color=color, alpha=0.05)  # Smoothed IQR shading
+
+        # Formatting
+        ax.set_xlim(0, 22000)
+        ax.set_ylim(-50, -5)
+        ax.grid()
+        ax.set_xlabel("(b) Episodes")
+        ax.set_ylabel("Return")
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax.set_xticks([0, 6_000, 12_000, 18_000])
+        ax.set_yticks([-50, -30, -10])
+
+        # Scientific notation for Y-axis
+        ax.yaxis.set_major_formatter(ticker.ScalarFormatter(useMathText=True))
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+
+        output_file = "figures/battery.jpg"
+        plt.savefig(output_file, dpi=300)
+        print(f"Figure saved to {output_file}")
 
 def plot_errors(errors,name):
     plt.stem(errors, basefmt=" ")
@@ -325,3 +518,222 @@ def crear_mosaico(fotos, output="figures/PI-PI-final.png"):
     # Guardar o mostrar el mosaico
     mosaic.save(output)
     mosaic.show()
+
+def plot_pendulum():
+    try:
+        dqn = np.load("results/pendulum_dqn.npy")
+        dfhqn = np.load("results/pendulum_dfhqn.npy")
+        fhtlr_max = np.load("results/pendulum_fhtlr_max.npy")
+        fhtlr_true = np.load("results/pendulum_fhtlr_true.npy")
+        fhtlr_max_er = np.load("results/pendulum_fhtlr_max_er.npy")
+        fhtlr_true_er = np.load("results/pendulum_fhtlr_true_er.npy")
+        fhrbf = np.load("results/pendulum_fhrbf.npy")
+        fhql = np.load("results/pendulum_fhql.npy")
+    except FileNotFoundError as e:
+        print(f"Error loading files: {e}")
+        return
+
+    # Calculate median
+    mu_dqn = np.median(dqn, axis=0)
+    mu_dfhqn = np.median(dfhqn, axis=0)
+    mu_fhtlr_max = np.median(fhtlr_max, axis=0)
+    mu_fhtlr_true = np.median(fhtlr_true, axis=0)
+    mu_fhtlr_max_er = np.median(fhtlr_max_er, axis=0)
+    mu_fhtlr_true_er = np.median(fhtlr_true_er, axis=0)
+    mu_fhrbf = np.median(fhrbf, axis=0)
+    mu_fhql = np.median(fhql, axis=0)
+
+    p25 = 40
+    p75 = 60
+
+    p25_dqn, p75_dqn = np.percentile(dqn, [p25, p75], axis=0)
+    p25_dfhqn, p75_dfhqn = np.percentile(dfhqn, [p25, p75], axis=0)
+    p25_fhtlr_max, p75_fhtlr_max = np.percentile(fhtlr_max, [p25, p75], axis=0)
+    p25_fhtlr_true, p75_fhtlr_true = np.percentile(fhtlr_true, [p25, p75], axis=0)
+    p25_fhtlr_max_er, p75_fhtlr_max_er = np.percentile(fhtlr_max_er, [p25, p75], axis=0)
+    p25_fhtlr_true_er, p75_fhtlr_true_er = np.percentile(fhtlr_true_er, [p25, p75], axis=0)
+    p25_fhrbf, p75_fhrbf = np.percentile(fhrbf, [p25, p75], axis=0)
+    p25_fhql, p75_fhql = np.percentile(fhql, [p25, p75], axis=0)
+
+    # Apply moving average for smoothing
+    def smooth(series, window=50):
+        return np.convolve(series, np.ones(window)/window, mode='valid')
+
+    smoothed_mu_dqn = smooth(mu_dqn)
+    smoothed_p25_dqn = smooth(p25_dqn)
+    smoothed_p75_dqn = smooth(p75_dqn)
+
+    smoothed_mu_dfhqn = smooth(mu_dfhqn)
+    smoothed_p25_dfhqn = smooth(p25_dfhqn)
+    smoothed_p75_dfhqn = smooth(p75_dfhqn)
+
+    smoothed_mu_fhtlr_max = smooth(mu_fhtlr_max)
+    smoothed_p25_fhtlr_max = smooth(p25_fhtlr_max)
+    smoothed_p75_fhtlr_max = smooth(p75_fhtlr_max)
+
+    smoothed_mu_fhtlr_true = smooth(mu_fhtlr_true)
+    smoothed_p25_fhtlr_true = smooth(p25_fhtlr_true)
+    smoothed_p75_fhtlr_true = smooth(p75_fhtlr_true)
+
+    smoothed_mu_fhtlr_max_er = smooth(mu_fhtlr_max_er)
+    smoothed_p25_fhtlr_max_er = smooth(p25_fhtlr_max_er)
+    smoothed_p75_fhtlr_max_er = smooth(p75_fhtlr_max_er)
+
+    smoothed_mu_fhtlr_true_er = smooth(mu_fhtlr_true_er)
+    smoothed_p25_fhtlr_true_er = smooth(p25_fhtlr_true_er)
+    smoothed_p75_fhtlr_true_er = smooth(p75_fhtlr_true_er)
+
+    smoothed_mu_fhrbf = smooth(mu_fhrbf)
+    smoothed_p25_fhrbf = smooth(p25_fhrbf)
+    smoothed_p75_fhrbf = smooth(p75_fhrbf)
+
+    smoothed_mu_fhql = smooth(mu_fhql)
+    smoothed_p25_fhql = smooth(p25_fhql)
+    smoothed_p75_fhql = smooth(p75_fhql)
+
+    x_smoothed = np.arange(0, len(smoothed_mu_fhtlr_max) * 10, 10)
+
+    import matplotlib.ticker as ticker
+    with plt.style.context(["science", "ieee"]):
+        matplotlib.rcParams.update({"font.size": 16})
+
+        fig, ax = plt.subplots(figsize=[5, 3])
+        
+        models = [
+            ("DQN", smoothed_mu_dqn, smoothed_p25_dqn, smoothed_p75_dqn, "k"),
+            ("DFHQN", smoothed_mu_dfhqn, smoothed_p25_dfhqn, smoothed_p75_dfhqn, "b"),
+            ("BCTD-PI", smoothed_mu_fhtlr_max, smoothed_p25_fhtlr_max, smoothed_p75_fhtlr_max, "r"),
+            ("S-BCGD-PI", smoothed_mu_fhtlr_true, smoothed_p25_fhtlr_true, smoothed_p75_fhtlr_true, "orange"),
+            ("BCTD-PI (ER)", smoothed_mu_fhtlr_max_er, smoothed_p25_fhtlr_max_er, smoothed_p75_fhtlr_max_er, "g"),
+            ("S-BCGD-PI (ER)", smoothed_mu_fhtlr_true_er, smoothed_p25_fhtlr_true_er, smoothed_p75_fhtlr_true_er, "y"),
+            ("LFHQL", smoothed_mu_fhrbf, smoothed_p25_fhrbf, smoothed_p75_fhrbf, "purple"),
+        ]
+
+        for label, smoothed_median, smoothed_p25, smoothed_p75, color in models:
+            ax.plot(x_smoothed, smoothed_median, c=color, label=f"{label}", linewidth=1)
+            ax.fill_between(x_smoothed, smoothed_p25, smoothed_p75, color=color, alpha=0.05)
+
+        ax.grid()
+        ax.set_xlabel("(c) Episodes")
+        ax.set_ylabel("Return")
+        ax.set_ylim(-0.6, 0.05)
+        ax.set_xlim(0, 3500)
+        ax.set_xticks([0, 1000, 2000, 3000])
+        ax.set_yticks([-0.6, -0.4, -0.2, 0])
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+
+        ax.yaxis.set_major_formatter(ticker.ScalarFormatter(useMathText=True))
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+        
+        output_file = "figures/pendulum.jpg"
+        plt.savefig(output_file, dpi=300)
+        print(f"Figure saved to {output_file}")
+
+def plot_cartpole():
+    try:
+        dqn = np.load("results/cartpole_dqn.npy")
+        dfhqn = np.load("results/cartpole_dfhqn.npy")
+        fhtlr_max = np.load("results/cartpole_fhtlr_max.npy")
+        fhtlr_true = np.load("results/cartpole_fhtlr_true.npy")
+        fhtlr_max_er = np.load("results/cartpole_fhtlr_max_er.npy")
+        fhtlr_true_er = np.load("results/cartpole_fhtlr_true_er.npy")
+        fhrbf = np.load("results/cartpole_fhrbf.npy")
+        fhql = np.load("results/cartpole_fhql.npy")
+    except FileNotFoundError as e:
+        print(f"Error loading files: {e}")
+        return
+
+    # Calculate median
+    mu_dqn = np.median(dqn, axis=0)
+    mu_dfhqn = np.median(dfhqn, axis=0)
+    mu_fhtlr_max = np.median(fhtlr_max, axis=0)
+    mu_fhtlr_true = np.median(fhtlr_true, axis=0)
+    mu_fhtlr_max_er = np.median(fhtlr_max_er, axis=0)
+    mu_fhtlr_true_er = np.median(fhtlr_true_er, axis=0)
+    mu_fhrbf = np.median(fhrbf, axis=0)
+    mu_fhql = np.median(fhql, axis=0)
+
+    p25 = 40
+    p75 = 60
+
+    p25_dqn, p75_dqn = np.percentile(dqn, [p25, p75], axis=0)
+    p25_dfhqn, p75_dfhqn = np.percentile(dfhqn, [p25, p75], axis=0)
+    p25_fhtlr_max, p75_fhtlr_max = np.percentile(fhtlr_max, [p25, p75], axis=0)
+    p25_fhtlr_true, p75_fhtlr_true = np.percentile(fhtlr_true, [p25, p75], axis=0)
+    p25_fhtlr_max_er, p75_fhtlr_max_er = np.percentile(fhtlr_max_er, [p25, p75], axis=0)
+    p25_fhtlr_true_er, p75_fhtlr_true_er = np.percentile(fhtlr_true_er, [p25, p75], axis=0)
+    p25_fhrbf, p75_fhrbf = np.percentile(fhrbf, [p25, p75], axis=0)
+    p25_fhql, p75_fhql = np.percentile(fhql, [p25, p75], axis=0)
+
+    # Apply moving average for smoothing
+    def smooth(series, window=50):
+        return np.convolve(series, np.ones(window)/window, mode='valid')
+
+    smoothed_mu_dqn = smooth(mu_dqn)
+    smoothed_p25_dqn = smooth(p25_dqn)
+    smoothed_p75_dqn = smooth(p75_dqn)
+
+    smoothed_mu_dfhqn = smooth(mu_dfhqn)
+    smoothed_p25_dfhqn = smooth(p25_dfhqn)
+    smoothed_p75_dfhqn = smooth(p75_dfhqn)
+
+    smoothed_mu_fhtlr_max = smooth(mu_fhtlr_max)
+    smoothed_p25_fhtlr_max = smooth(p25_fhtlr_max)
+    smoothed_p75_fhtlr_max = smooth(p75_fhtlr_max)
+
+    smoothed_mu_fhtlr_true = smooth(mu_fhtlr_true)
+    smoothed_p25_fhtlr_true = smooth(p25_fhtlr_true)
+    smoothed_p75_fhtlr_true = smooth(p75_fhtlr_true)
+
+    smoothed_mu_fhtlr_max_er = smooth(mu_fhtlr_max_er)
+    smoothed_p25_fhtlr_max_er = smooth(p25_fhtlr_max_er)
+    smoothed_p75_fhtlr_max_er = smooth(p75_fhtlr_max_er)
+
+    smoothed_mu_fhtlr_true_er = smooth(mu_fhtlr_true_er)
+    smoothed_p25_fhtlr_true_er = smooth(p25_fhtlr_true_er)
+    smoothed_p75_fhtlr_true_er = smooth(p75_fhtlr_true_er)
+
+    smoothed_mu_fhrbf = smooth(mu_fhrbf)
+    smoothed_p25_fhrbf = smooth(p25_fhrbf)
+    smoothed_p75_fhrbf = smooth(p75_fhrbf)
+
+    smoothed_mu_fhql = smooth(mu_fhql)
+    smoothed_p25_fhql = smooth(p25_fhql)
+    smoothed_p75_fhql = smooth(p75_fhql)
+
+    x_smoothed = np.arange(0, len(smoothed_mu_fhtlr_max) * 10, 10)
+
+    import matplotlib.ticker as ticker
+    with plt.style.context(["science", "ieee"]):
+        matplotlib.rcParams.update({"font.size": 16})
+
+        fig, ax = plt.subplots(figsize=[5, 3])
+        
+        models = [
+            ("DQN", smoothed_mu_dqn, smoothed_p25_dqn, smoothed_p75_dqn, "k"),
+            ("DFHQN", smoothed_mu_dfhqn, smoothed_p25_dfhqn, smoothed_p75_dfhqn, "b"),
+            ("BCTD-PI", smoothed_mu_fhtlr_max, smoothed_p25_fhtlr_max, smoothed_p75_fhtlr_max, "r"),
+            ("S-BCGD-PI", smoothed_mu_fhtlr_true, smoothed_p25_fhtlr_true, smoothed_p75_fhtlr_true, "orange"),
+            ("BCTD-PI (ER)", smoothed_mu_fhtlr_max_er, smoothed_p25_fhtlr_max_er, smoothed_p75_fhtlr_max_er, "g"),
+            ("S-BCGD-PI (ER)", smoothed_mu_fhtlr_true_er, smoothed_p25_fhtlr_true_er, smoothed_p75_fhtlr_true_er, "y"),
+            ("LFHQL", smoothed_mu_fhrbf, smoothed_p25_fhrbf, smoothed_p75_fhrbf, "purple"),
+        ]
+
+        for label, smoothed_median, smoothed_p25, smoothed_p75, color in models:
+            ax.plot(x_smoothed, smoothed_median, c=color, label=f"{label}", linewidth=1)
+            ax.fill_between(x_smoothed, smoothed_p25, smoothed_p75, color=color, alpha=0.05)
+
+        ax.grid()
+        ax.set_xlabel("(d) Episodes")
+        ax.set_ylabel("Return")
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax.set_ylim(-0.125, 0.01)
+        ax.set_xlim(0, 3500)
+        ax.set_xticks([0, 1000, 2000, 3000])
+        ax.set_yticks([-0.125, -0.0625, 0])
+        ax.yaxis.set_major_formatter(ticker.ScalarFormatter(useMathText=True))
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+        
+        output_file = "figures/cartpole.jpg"
+        plt.savefig(output_file, dpi=300)
+        print(f"Figure saved to {output_file}")
