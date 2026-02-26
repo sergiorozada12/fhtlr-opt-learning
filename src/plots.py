@@ -737,3 +737,110 @@ def plot_cartpole():
         output_file = "figures/cartpole.jpg"
         plt.savefig(output_file, dpi=300)
         print(f"Figure saved to {output_file}")
+
+def plot_channel_coding():
+    try:
+        dqn = np.load("results/channel_coding_dqn.npy")
+        dfhqn = np.load("results/channel_coding_dfhqn.npy")
+        fhtlr_max = np.load("results/channel_coding_fhtlr_max.npy")
+        fhtlr_true = np.load("results/channel_coding_fhtlr_true.npy")
+        fhql = np.load("results/channel_coding_fhql.npy")
+        fhlinear = np.load("results/channel_coding_fhlinear.npy")
+        fhrbf = np.load("results/channel_coding_fhrbf.npy")
+        ql = np.load("results/channel_coding_ql.npy")
+    except FileNotFoundError as e:
+        print(f"Error loading files: {e}")
+        return
+
+    # Compute median
+    mu_dqn = np.median(dqn, axis=0)
+    mu_dfhqn = np.median(dfhqn, axis=0)
+    mu_fhtlr_max = np.median(fhtlr_max, axis=0)
+    mu_fhtlr_true = np.median(fhtlr_true, axis=0)
+    mu_fhql = np.median(fhql, axis=0)
+    mu_fhlinear = np.median(fhlinear, axis=0)
+    mu_fhrbf = np.median(fhrbf, axis=0)
+    mu_ql = np.median(ql, axis=0)
+
+    p25 = 25
+    p75 = 75
+
+    # Compute P25 and P75
+    p25_dqn, p75_dqn = np.percentile(dqn, [p25, p75], axis=0)
+    p25_dfhqn, p75_dfhqn = np.percentile(dfhqn, [p25, p75], axis=0)
+    p25_fhtlr_max, p75_fhtlr_max = np.percentile(fhtlr_max, [p25, p75], axis=0)
+    p25_fhtlr_true, p75_fhtlr_true = np.percentile(fhtlr_true, [p25, p75], axis=0)
+    p25_fhql, p75_fhql = np.percentile(fhql, [p25, p75], axis=0)
+    p25_fhlinear, p75_fhlinear = np.percentile(fhlinear, [p25, p75], axis=0)
+    p25_fhrbf, p75_fhrbf = np.percentile(fhrbf, [p25, p75], axis=0)
+    p25_ql, p75_ql = np.percentile(ql, [p25, p75], axis=0)
+
+    # Apply moving average for smoothing
+    def smooth(series, window=100):
+        return np.convolve(series, np.ones(window)/window, mode='valid')
+
+    # Smooth the median and IQR bounds
+    smoothed_mu_dqn = smooth(mu_dqn)
+    smoothed_p25_dqn = smooth(p25_dqn)
+    smoothed_p75_dqn = smooth(p75_dqn)
+
+    smoothed_mu_dfhqn = smooth(mu_dfhqn)
+    smoothed_p25_dfhqn = smooth(p25_dfhqn)
+    smoothed_p75_dfhqn = smooth(p75_dfhqn)
+
+    smoothed_mu_fhtlr_max = smooth(mu_fhtlr_max)
+    smoothed_p25_fhtlr_max = smooth(p25_fhtlr_max)
+    smoothed_p75_fhtlr_max = smooth(p75_fhtlr_max)
+
+    smoothed_mu_fhtlr_true = smooth(mu_fhtlr_true)
+    smoothed_p25_fhtlr_true = smooth(p25_fhtlr_true)
+    smoothed_p75_fhtlr_true = smooth(p75_fhtlr_true)
+
+    smoothed_mu_fhql = smooth(mu_fhql)
+    smoothed_p25_fhql = smooth(p25_fhql)
+    smoothed_p75_fhql = smooth(p75_fhql)
+
+    smoothed_mu_fhlinear = smooth(mu_fhlinear)
+    smoothed_p25_fhlinear = smooth(p25_fhlinear)
+    smoothed_p75_fhlinear = smooth(p75_fhlinear)
+
+    smoothed_mu_fhrbf = smooth(mu_fhrbf)
+    smoothed_p25_fhrbf = smooth(p25_fhrbf)
+    smoothed_p75_fhrbf = smooth(p75_fhrbf)
+
+    smoothed_mu_ql = smooth(mu_ql)
+    smoothed_p25_ql = smooth(p25_ql)
+    smoothed_p75_ql = smooth(p75_ql)
+
+    # Returns are captured every 100 episodes
+    x_smoothed = np.arange(0, len(smoothed_mu_fhtlr_max) * 100, 100)
+
+    import matplotlib.ticker as ticker
+    with plt.style.context(["science", "ieee"]):
+        matplotlib.rcParams.update({"font.size": 16})
+
+        fig, ax = plt.subplots(figsize=[5, 3])
+        
+        models = [
+            ("DQN", smoothed_mu_dqn, smoothed_p25_dqn, smoothed_p75_dqn, "k"),
+            ("DFHQN", smoothed_mu_dfhqn, smoothed_p25_dfhqn, smoothed_p75_dfhqn, "b"),
+            ("BCTD-PI", smoothed_mu_fhtlr_max, smoothed_p25_fhtlr_max, smoothed_p75_fhtlr_max, "r"),
+            ("S-BCGD-PI", smoothed_mu_fhtlr_true, smoothed_p25_fhtlr_true, smoothed_p75_fhtlr_true, "orange"),
+            ("LFHQL", smoothed_mu_fhrbf, smoothed_p25_fhrbf, smoothed_p75_fhrbf, "purple"),
+            ("FHQL", smoothed_mu_fhql, smoothed_p25_fhql, smoothed_p75_fhql, "g"),
+            ("FHLinear", smoothed_mu_fhlinear, smoothed_p25_fhlinear, smoothed_p75_fhlinear, "y"),
+            ("QLearning", smoothed_mu_ql, smoothed_p25_ql, smoothed_p75_ql, "c"),
+        ]
+
+        for label, smoothed_median, smoothed_p25, smoothed_p75, color in models:
+            ax.plot(x_smoothed, smoothed_median, c=color, label=f"{label}", linewidth=1)
+            ax.fill_between(x_smoothed, smoothed_p25, smoothed_p75, color=color, alpha=0.05)
+
+        ax.grid()
+        ax.set_xlabel("Episodes")
+        ax.set_ylabel("Return")
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        
+        output_file = "figures/channel_coding.jpg"
+        plt.savefig(output_file, dpi=300)
+        print(f"Figure saved to {output_file}")

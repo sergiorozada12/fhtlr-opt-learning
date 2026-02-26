@@ -12,6 +12,7 @@ __pycache__/
 *$py.class
 results/
 legacy/
+figures_old/
 
 # C extensions
 *.so

@@ -320,7 +320,7 @@ class SourceChannelCodingEnv(gym.Env):
     - Compression shrinks remaining data dynamically
     """
 
-    def __init__(self, T=10, K=3, data_initial=100.0, rho=0.9, sigma=0.2, beta_success=2.0):
+    def __init__(self, T=10, K=3, data_initial=15.0, rho=0.9, sigma=0.2, beta_success=2.0):
         super(SourceChannelCodingEnv, self).__init__()
 
         self.T = T
@@ -349,7 +349,7 @@ class SourceChannelCodingEnv(gym.Env):
         self.final_penalty_weight = 50.0
 
         # controls the effectiveness of compression
-        self.alpha_compression = 100
+        self.alpha_compression = 5
 
         # Cost per bit transmitted per channel (randomized at init)
         self.channel_costs = np.random.uniform(0.5, 1.5, size=self.K)
