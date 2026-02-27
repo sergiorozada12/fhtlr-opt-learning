@@ -128,3 +128,5 @@ def run_channel_coding_simulations():
     run_paralell(['fhtlr_true'], ['fhtlr_true'], N_EXPS)
     run_paralell(['fhtlr_max_er'], ['fhtlr_max_er'], N_EXPS)
     run_paralell(['fhtlr_true_er'], ['fhtlr_true_er'], N_EXPS)
+    run_paralell(['fhrbf'], ['fhrbf'], N_EXPS)
+    run_paralell(['fhbf'], ['fhbf'], N_EXPS)

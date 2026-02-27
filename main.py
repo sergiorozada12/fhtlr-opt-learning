@@ -13,11 +13,11 @@ if __name__ == "__main__":
     #run_battery_simulations()
     #run_pendulum_simulations()
     #run_cartpole_simulations()
-    run_channel_coding_simulations()
+    #run_channel_coding_simulations()
     
     # Generate plots
     #plot_wireless()
     #plot_battery()
     #plot_pendulum()
     #plot_cartpole()
-    #plot_channel_coding()
+    plot_channel_coding()
