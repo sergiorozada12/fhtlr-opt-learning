@@ -53,6 +53,10 @@ class Discretizer:
     def get_action_from_index(self, action_idx: np.ndarray) -> np.ndarray:
         return self.min_points_actions + action_idx * self.spacing_actions
 
+    def get_state_from_index(self, state_idx: np.ndarray) -> np.ndarray:
+        spacing_states = (self.max_points_states - self.min_points_states) / (self.bucket_states - 1)
+        return self.min_points_states + np.array(state_idx) * spacing_states
+
 
 @dataclass
 class Transition:
