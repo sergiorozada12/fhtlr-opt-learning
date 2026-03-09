@@ -868,19 +868,21 @@ def plot_gym_parafac():
         fig, axarr = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
 
         # Plot Pendulum
-        axarr[0].plot(pen_ranks, pen_errors, marker='o', color='b', label="Pendulum")
-        axarr[0].set_xlabel("Rank")
-        axarr[0].set_ylabel("NFE")
+        axarr[0].plot((100 * np.array(pen_ranks) / 10_000), 100 * np.array(pen_errors), marker='o', color='r', label="Pendulum")
+        axarr[0].set_xlabel("Rank / Max. Rank (\%)")
+        axarr[0].set_ylabel("NFE (\%)")
         axarr[0].set_title("Pendulum")
         axarr[0].grid(True)
+        axarr[0].set_ylim(0, 100)
         axarr[0].yaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
 
         # Plot CartPole
-        axarr[1].plot(cart_ranks, cart_errors, marker='s', color='r', label="CartPole")
-        axarr[1].set_xlabel("Rank")
-        axarr[1].set_ylabel("NFE")
+        axarr[1].plot((100 * np.array(cart_ranks) / 100_000), 100 * np.array(cart_errors), marker='o', color='r', label="CartPole")
+        axarr[1].set_xlabel("Rank / Max. Rank (\%)")
+        axarr[1].set_ylabel("NFE (\%)")
         axarr[1].set_title("CartPole")
         axarr[1].grid(True)
+        axarr[1].set_ylim(0, 100)
         axarr[1].yaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
 
         output_file = "figures/gym_parafac.jpg"
