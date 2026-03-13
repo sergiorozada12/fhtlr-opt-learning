@@ -111,7 +111,13 @@ def train_and_eval_env(env_name, config_module, eps=20_000):
     
     # Evaluate ranks
     print("Evaluating PARAFAC ranks...")
-    ranks, errors = evaluate_parafac_ranks(Q_tensor, max_rank=300, step=10)
+    if env_name == "Pendulum":
+        max_rank = 300
+        step = 10
+    else:
+        max_rank = 1_500
+        step = 50
+    ranks, errors = evaluate_parafac_ranks(Q_tensor, max_rank=max_rank, step=step)
     
     return {"ranks": ranks, "errors": errors}
 
