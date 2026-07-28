@@ -10,6 +10,7 @@ from src.agents.dqn import Dqn, DFHqn
 from src.agents.fhtlr import FHTlr, FHMaxTlr
 from src.agents.ql import FHQLearning
 from src.agents.rbf import FHRBF
+from src.agents.lsvi_ucb import FHLSVIUCB
 from src.trainer import run_experiment
 
 torch.set_num_threads(1)
@@ -81,12 +82,17 @@ def run_experiment_with_agent(agent_name, n_exp):
         agent = FHQLearning(DISCRETIZER, ALPHA_QL, H, 0.1, 1)
     elif agent_name == 'fhrbf':
         agent = FHRBF(DISCRETIZER, ALPHA_FHRBF, H, BUFFER_SIZE)
+    elif agent_name == 'lsvi_ucb':
+        agent = FHLSVIUCB(DISCRETIZER, H, bonus_coef=0.03, feature_seed=n_exp)
     
     if agent is None:
         raise ValueError(f"Unknown agent: {agent_name}")
 
     # Note: run_experiment defined in trainer.py returns Gs (list of returns)
-    Gs = run_experiment(n=n_exp, E=EPISODES, H=H, eps=1.0, eps_decay=EPS_DECAY, env=generate_env(), agent=agent)
+    Gs = run_experiment(
+        n=n_exp, E=EPISODES, H=H, eps=1.0,
+        eps_decay=EPS_DECAY, env=generate_env(), agent=agent,
+    )
     return Gs
 
 def run_paralell(names, agents, n_exps, delta_exp=0):
@@ -137,6 +143,11 @@ def run_pendulum_simulations(n_exps=100):
     for agent in agents_to_run:
         print(f"Running experiments for {agent}...")
         run_paralell([agent], [agent], n_exps)
+
+
+def run_lsvi_ucb_pendulum_simulations(n_exps=10, delta_exp=0):
+    run_paralell(['lsvi_ucb'], ['lsvi_ucb'], n_exps, delta_exp)
+
 
 if __name__ == "__main__":
     # Default to a small number for testing if run directly, or use argument

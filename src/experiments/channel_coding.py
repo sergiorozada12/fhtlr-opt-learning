@@ -12,7 +12,10 @@ from src.agents.fhtlr import FHMaxTlr, FHTlr
 from src.agents.ql import QLearning, FHQLearning
 from src.agents.bf import FHLinear
 from src.agents.rbf import FHRBF
-from src.trainer import run_experiment
+from src.agents.pg import PG
+from src.agents.ctrl_ucb import CTRLUCBM
+from src.agents.lsvi_ucb import FHLSVIUCB
+from src.trainer import run_ctrl_ucbm_experiment, run_experiment, run_pg_experiment
 
 
 torch.set_num_threads(1)
@@ -55,6 +58,8 @@ ALPHA_FHTLR_ER = 0.01
 ALPHA_QL = 0.1
 ALPHA_FHRBF = 0.1
 ALPHA_LINEAR = 0.1
+ALPHA_PG = 3e-4
+ALPHA_CTRL = 3e-4
 
 K = 20
 SCALE = 0.1
@@ -99,8 +104,27 @@ def run_experiment_with_agent(agent_name, n_exp):
         agent = FHRBF(DISCRETIZER, ALPHA_FHRBF, H, BUFFER_SIZE)
     if agent_name == "ql":
         agent = QLearning(DISCRETIZER, ALPHA_QL, GAMMA)
+    if agent_name == "pg":
+        agent = PG(DISCRETIZER, H, alpha=ALPHA_PG, gamma=GAMMA)
+    if agent_name == "ctrl_ucbm":
+        agent = CTRLUCBM(
+            DISCRETIZER, H, gamma=GAMMA, actor_lr=ALPHA_CTRL,
+            exact_action_threshold=32,
+        )
+    if agent_name == "lsvi_ucb":
+        agent = FHLSVIUCB(
+            DISCRETIZER, H, bonus_coef=1.0, feature_seed=n_exp,
+            normalize_states=True, action_candidates=256,
+        )
     
-    Gs  = run_experiment(n=n_exp, E=EPISODES, H=H, eps=1.0, eps_decay=EPS_DECAY, env=generate_env(), agent=agent)                               
+    if agent_name == "pg":
+        Gs = run_pg_experiment(n=n_exp, E=EPISODES, H=H, env=generate_env(), agent=agent)
+    elif agent_name == "ctrl_ucbm":
+        Gs = run_ctrl_ucbm_experiment(
+            n=n_exp, E=EPISODES, H=H, env=generate_env(), agent=agent
+        )
+    else:
+        Gs = run_experiment(n=n_exp, E=EPISODES, H=H, eps=1.0, eps_decay=EPS_DECAY, env=generate_env(), agent=agent)
     return Gs
 
 
@@ -119,6 +143,18 @@ def run_paralell(names, agents, n_exps, delta_exp=0):
         
         np.save(file_path, combined_data)
         idx += n_exps
+
+
+def run_pg_channel_coding_simulations(n_exps=100, delta_exp=0):
+    run_paralell(['pg'], ['pg'], n_exps, delta_exp)
+
+
+def run_ctrl_ucbm_channel_coding_simulations(n_exps=10, delta_exp=0):
+    run_paralell(['ctrl_ucbm'], ['ctrl_ucbm'], n_exps, delta_exp)
+
+
+def run_lsvi_ucb_channel_coding_simulations(n_exps=100, delta_exp=0):
+    run_paralell(['lsvi_ucb'], ['lsvi_ucb'], n_exps, delta_exp)
 
 
 def run_channel_coding_simulations():

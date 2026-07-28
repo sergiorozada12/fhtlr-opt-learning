@@ -1,5 +1,7 @@
 import numpy as np
+from multiprocessing import Pool
 import pickle
+import torch
 from src.environments import GridWorldEnv
 from src.agents.ql import QLearning, FHQLearning
 from src.agents.dp import BackwardPropagation, FrontPolicyImprovement, BackPolicyImprovement
@@ -30,23 +32,29 @@ def init_env():
 
 BCD_PE_k_list = [15,25,30]
 BCD_PE_Q_scale = 1
-BCD_PE_num_iter = 500
+BCD_PE_num_iter = 2000
 
 BCGD_PE_k_list = [15,25,30]
 BCGD_PE_Q_scale = 0.5
-BCGD_PE_num_iter = 2000
+BCGD_PE_num_iter = 100000
 BCGD_PE_alpha = 10e-3
 
 BCD_PI_k_list = [15, 25, 30]
 BCD_PI_scale = 0.7
 BCD_PI_bcd_num_iter = 5
-BCD_PI_policy_num_iter = 100
+BCD_PI_policy_num_iter = 400
 
 BCGD_PI_k_list = [15, 25, 30]
 BCGD_PI_scale = 0.5
 BCGD_PI_bcd_num_iter = 50
 BCGD_PI_policy_num_iter = 2000
 BCGD_PI_alpha = 10e-3
+GRIDWORLD_FIGURE_SEEDS = {
+    "bcd_pe": {15: 1015, 25: 1025, 30: 1030},
+    "bcd_pi": {15: 101, 25: 27, 30: 101},
+    "bcgd_pe": {15: 1015, 25: 1025, 30: 1030},
+    "bcgd_pi": {15: 1015, 25: 1025, 30: 1030},
+}
 
 def BCD_PE_exp(Q_opt, Pi):
 
@@ -190,3 +198,60 @@ def run_gridworld_simulations():
 
     #POLICY EVALUATION WITH BCGD
     BCGD_PI_exp(Q_opt,Pi_opt)
+
+def _run_gridworld_job(kind, k, seed=None):
+    """Run one independent rank configuration for the convergence figure."""
+    seed = GRIDWORLD_FIGURE_SEEDS[kind][k] if seed is None else seed
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    init_env()
+    bp_learner = BackwardPropagation(ENV.H, ENV.nS, ENV.nA, ENV.R, ENV.P)
+    bp_learner.run()
+    q_opt = bp_learner.Q
+    pi_opt = np.zeros((ENV.H, ENV.nS, ENV.nA))
+    for h in range(ENV.H):
+        for state in range(ENV.nS):
+            pi_opt[h, state, np.argmax(q_opt[h, state])] = 1
+    q_model = PARAFAC(
+        np.concatenate([[ENV.H], discretizer.bucket_states, discretizer.bucket_actions]),
+        k=k, scale={"bcd_pe": BCD_PE_Q_scale, "bcgd_pe": BCGD_PE_Q_scale,
+                   "bcd_pi": BCD_PI_scale, "bcgd_pi": BCGD_PI_scale}[kind],
+        nA=len(discretizer.bucket_actions),
+    ).double()
+    shaped_q_opt = q_opt.reshape(ENV.H, ENV.W, ENV.W, ENV.nA)
+    if kind == "bcd_pe":
+        values = bcd(q_model, pi_opt, discretizer, ENV, k, shaped_q_opt).run(BCD_PE_num_iter)[:3]
+    elif kind == "bcgd_pe":
+        values = bcgd(q_model, pi_opt, discretizer, ENV, k, shaped_q_opt, BCGD_PE_alpha).run(BCGD_PE_num_iter)[:3]
+    elif kind == "bcd_pi":
+        values = bcd(q_model, pi_opt, discretizer, ENV, k, shaped_q_opt).bcd_policy_improvement(
+            BCD_PI_policy_num_iter, BCD_PI_bcd_num_iter
+        )[:5]
+    elif kind == "bcgd_pi":
+        values = bcgd(q_model, pi_opt, discretizer, ENV, k, shaped_q_opt, BCGD_PI_alpha).bcgd_policy_improvement(
+            BCGD_PI_policy_num_iter, BCGD_PI_bcd_num_iter
+        )[:5]
+    else:
+        raise ValueError(f"Unknown GridWorld job: {kind}")
+    return kind, k, values
+
+
+def run_gridworld_figure_experiments(processes=12):
+    """Create the four GridWorld pickles, parallelizing independent ranks."""
+    rank_map = {
+        "bcd_pe": BCD_PE_k_list, "bcgd_pe": BCGD_PE_k_list,
+        "bcd_pi": BCD_PI_k_list, "bcgd_pi": BCGD_PI_k_list,
+    }
+    jobs = [(kind, rank) for kind, ranks in rank_map.items() for rank in ranks]
+    with Pool(processes=min(processes, len(jobs))) as pool:
+        completed = pool.starmap(_run_gridworld_job, jobs)
+    by_kind = {kind: {} for kind in rank_map}
+    for kind, rank, values in completed:
+        by_kind[kind][rank] = values
+    for kind, ranks in rank_map.items():
+        ordered = [by_kind[kind][rank] for rank in ranks]
+        data = [list(field) for field in zip(*ordered)]
+        path = f"results/gridworld_{kind}.pkl"
+        with open(path, "wb") as handle:
+            pickle.dump(data, handle)
+        print(f"Saved {path}")

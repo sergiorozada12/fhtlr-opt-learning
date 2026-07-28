@@ -234,7 +234,7 @@ class bcd:
 
 class bcgd:
 
-    def __init__(self,Q,Pi,discretizer,env,k,Q_opt,alpha, normalize = 0,decay =0.99996) -> None:
+    def __init__(self,Q,Pi,discretizer,env,k,Q_opt,alpha, normalize = 0,decay=1.0) -> None:
 
         self.Q = Q
         self.Pi = Pi
@@ -291,7 +291,7 @@ class bcgd:
             if errors[-1] < 10^-6:
                 break
             
-            new_values = [torch.tensor(H),torch.tensor(S1_i),torch.tensor(S2_i),torch.tensor(A)]
+            new_values = [torch.tensor(H_i), torch.tensor(S1_i), torch.tensor(S2_i), torch.tensor(A_i)]
             with torch.no_grad():  # Desactivamos el cálculo de gradientes para la actualización directa
                 for param, new_value in zip(self.Q.factors, new_values):
                     param.copy_(new_value)  # Copiar los nuevos valores al parámetro existente

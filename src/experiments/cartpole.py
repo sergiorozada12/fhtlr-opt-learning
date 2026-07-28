@@ -10,6 +10,7 @@ from src.agents.dqn import Dqn, DFHqn
 from src.agents.fhtlr import FHTlr, FHMaxTlr
 from src.agents.ql import FHQLearning
 from src.agents.rbf import FHRBF
+from src.agents.lsvi_ucb import FHLSVIUCB
 from src.trainer import run_experiment
 
 torch.set_num_threads(1)
@@ -84,6 +85,8 @@ def run_experiment_with_agent(agent_name, n_exp):
         agent = FHQLearning(DISCRETIZER, ALPHA_QL, H, 0.1, 1)
     elif agent_name == 'fhrbf':
         agent = FHRBF(DISCRETIZER, ALPHA_FHRBF, H, BUFFER_SIZE)
+    elif agent_name == 'lsvi_ucb':
+        agent = FHLSVIUCB(DISCRETIZER, H, bonus_coef=0.1, feature_seed=n_exp)
     
     if agent is None:
         raise ValueError(f"Unknown agent: {agent_name}")
@@ -116,6 +119,10 @@ def run_paralell(names, agents, n_exps, delta_exp=0):
             combined_data = np.concatenate((existing_data, combined_data), axis=0)
         
         np.save(file_path, combined_data)
+
+
+def run_lsvi_ucb_cartpole_simulations(n_exps=100, delta_exp=0):
+    run_paralell(['lsvi_ucb'], ['lsvi_ucb'], n_exps, delta_exp)
 
 
 def run_cartpole_simulations(n_exps=100):
