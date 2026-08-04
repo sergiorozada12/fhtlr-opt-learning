@@ -387,51 +387,60 @@ def plot_errors(errors,name):
     plt.savefig("figures/"+name+"errors")
     plt.clf()
 
-def plot_tensor_rank(Q_to_plot,name,max_rank =  25):
-    
+def plot_tensor_rank(
+    Q_to_plot,
+    ranks=(1, 5, 10, 15, 20, 25, 30),
+    random_state=42,
+    n_iter_max=500,
+    tol=1e-8,
+):
+    """Fit selected CP ranks and save the final horizontal GridWorld plot."""
     tensor = Q_to_plot - np.mean(Q_to_plot)
-    norm_frobenius_original_tensor = np.linalg.norm(tensor)
-    factors = []
-    normlaized_errors = []
-    for i in range(1,max_rank):
+    tensor_norm = np.linalg.norm(tensor)
+    errors = []
 
-        factor =  parafac(tensor, rank=i)
-        factors.append(factor)
-        reconstructed_tensor = tl.cp_to_tensor(factor)
-        normlaized_errors.append(np.linalg.norm(tensor-reconstructed_tensor)/(norm_frobenius_original_tensor/100))
-        if normlaized_errors[-1] < 10e-9:
-            break
+    for rank in ranks:
+        factor = parafac(
+            tensor,
+            rank=rank,
+            init="svd",
+            svd="truncated_svd",
+            random_state=random_state,
+            n_iter_max=n_iter_max,
+            tol=tol,
+        )
+        reconstructed = tl.cp_to_tensor(factor)
+        error = 100 * np.linalg.norm(tensor - reconstructed) / tensor_norm
+        errors.append(float(error))
+        print(f"rank={rank:2d} NFE={error:.7g}%")
 
-    rangos = np.arange(1, len(normlaized_errors)+1)  # Rango del 1 al 10
-    error = np.array(normlaized_errors)  # Errores aleatorios para cada rango
+    data = {
+        "shape": list(tensor.shape),
+        "initialization": "svd/truncated_svd",
+        "random_state": random_state,
+        "n_iter_max": n_iter_max,
+        "tol": tol,
+        "ranks": list(ranks),
+        "errors_percent": errors,
+    }
+    with open("results/rank_grid.json", "w") as handle:
+        json.dump(data, handle, indent=2)
 
+    with plt.style.context(["science"]):
+        matplotlib.rcParams.update({"font.size": 18, "text.usetex": False})
+        fig, ax = plt.subplots(figsize=(7, 3.2))
+        ax.plot(ranks, errors, marker="o")
+        ax.set_yscale("log")
+        ax.set_xticks(ranks)
+        ax.set_xlim(0, max(ranks) + 1)
+        ax.set_xlabel("Rank")
+        ax.set_ylabel("NFE (%) - GridWorld")
+        ax.grid(True, axis="y", which="both")
+        fig.tight_layout()
+        fig.savefig("figures/rank_grid.png", dpi=300)
+        plt.close(fig)
 
-    with plt.style.context(["science"], ["ieee"]):
-        matplotlib.rcParams.update({"font.size": 16})
-
-        fig = plt.figure(figsize=[5, 4])
-        plt.plot(rangos, error, marker='o')
-
-        # Configurar notación científica en los ejes
-        ax = plt.gca()  # Obtener el objeto del eje actual
-        ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-        ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-
-        plt.locator_params(axis='y', nbins=5)  # 5 líneas en el eje Y
-
-        ax.ticklabel_format(style='scientific', axis='y', scilimits=(0, 0))  # Habilitar notación científica
-
-        plt.ylim(0, 100)
-        plt.xlim(0,len(error)+1)
-        plt.xlabel("Rank")
-        plt.ylabel("NFE(%) - GridWord")
-        plt.grid(True,axis='y')
-        plt.tight_layout()
-        if name is None:
-            plt.show()
-        else:
-            plt.savefig("figures/"+name+"errors")
-        plt.clf()
+    return data
 
 def find_max_positions(array):
     # Encontrar el valor máximo

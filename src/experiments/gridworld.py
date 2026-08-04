@@ -28,6 +28,16 @@ def init_env():
         bucket_actions=[5],
     )
 
+
+def run_rank_grid(seed=42):
+    """Generate the final GridWorld CP-rank figure and its source data."""
+    np.random.seed(seed)
+    init_env()
+    learner = BackwardPropagation(ENV.H, ENV.nS, ENV.nA, ENV.R, ENV.P)
+    learner.run()
+    q_grid = learner.Q.reshape(ENV.H, ENV.W, ENV.W, ENV.nA)
+    return plot_tensor_rank(q_grid, random_state=seed)
+
 #Hyperparameters
 
 BCD_PE_k_list = [15,25,30]

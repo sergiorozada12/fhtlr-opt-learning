@@ -10,7 +10,7 @@ from src.plots import plot_wireless, plot_battery, plot_pendulum, plot_cartpole,
 
 
 if __name__ == "__main__":
-    """run_gridworld_simulations()
+    run_gridworld_simulations()
     run_wireless_simulations()
     run_battery_simulations()
     run_pendulum_simulations()
@@ -26,5 +26,5 @@ if __name__ == "__main__":
     plot_channel_coding()
     plot_gym_parafac()
     plot_gym_returns()
-    plot_real_cases()"""
+    plot_real_cases()
     plot_real_parafac()
